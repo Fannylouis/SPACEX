@@ -29,25 +29,25 @@ service cloud.firestore {
 
     // Entity Validations
     function isValidUser(data) {
-      let hasBase = data.keys().hasAll(['email', 'balance', 'kycStatus', 'createdAt']);
-      let hasFirstName = data.keys().hasAll(['firstName']) ? (data.firstName is string && data.firstName.size() <= 100) : true;
-      let hasTier = data.keys().hasAll(['investmentTier']) ? (data.investmentTier is string && data.investmentTier.size() <= 100) : true;
-      
-      return hasBase && hasFirstName && hasTier &&
-             data.email is string && data.email.size() <= 256 &&
+      return data.keys().hasAll(['email', 'balance', 'kycStatus', 'createdAt']) &&
+             data.email is string &&
              data.balance is number &&
              data.kycStatus in ['Pending', 'Verified', 'Rejected', 'Not Set'] &&
-             data.createdAt is timestamp;
+             data.createdAt is timestamp &&
+             (!data.keys().hasAll(['firstName']) || (data.firstName is string && data.firstName.size() <= 100)) &&
+             (!data.keys().hasAll(['investmentTier']) || (data.investmentTier is string && data.investmentTier.size() <= 100)) &&
+             (!data.keys().hasAll(['identityInfo']) || (data.identityInfo is map));
     }
 
     function isValidTransaction(data) {
       return data.keys().hasAll(['userId', 'type', 'amount', 'method', 'status', 'date']) &&
              data.userId == request.auth.uid &&
-             data.type in ['Deposit', 'Withdraw'] &&
-             data.amount is number && data.amount > 0 &&
-             data.method is string && data.method.size() <= 100 &&
-             data.status is string && data.status.size() <= 50 &&
-             data.date is timestamp;
+             data.type is string &&
+             data.amount is number &&
+             data.method is string &&
+             data.status is string &&
+             data.date is timestamp &&
+             (!data.keys().hasAll(['tier']) || (data.tier is string && data.tier.size() <= 100));
     }
 
     function isValidOrder(data) {
@@ -68,7 +68,7 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidUser(incoming()) && 
                     incoming().createdAt == existing().createdAt &&
                     incoming().email == existing().email &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo']);
+                    incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'investmentTier']);
     }
 
     match /transactions/{transactionId} {

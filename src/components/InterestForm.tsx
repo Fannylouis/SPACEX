@@ -2,13 +2,19 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Send, Globe, Mail, Phone, Lock, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function InterestForm() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/invest/dashboard');
+    if (user) {
+      navigate('/invest/dashboard');
+    } else {
+      navigate('/invest/signup');
+    }
   };
 
   return (

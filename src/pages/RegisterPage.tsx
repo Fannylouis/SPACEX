@@ -33,6 +33,33 @@ export default function RegisterPage() {
     
     try {
       await signUp(email, password, firstName, investmentTier);
+      
+      // Dispatch Confirmation Email via backend API
+      try {
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: email,
+            subject: 'Account Initialization Success | SpaceX Asset Vault',
+            html: `
+              <div style="font-family: monospace; padding: 40px; background: #000; color: #fff; border: 1px solid #1e3a8a;">
+                <h1 style="color: #3b82f6; font-size: 24px; text-transform: uppercase; letter-spacing: 0.2em;">SpaceX Protocol</h1>
+                <p style="color: #64748b; font-size: 12px; text-transform: uppercase;">Identity: ${firstName}</p>
+                <div style="border-top: 1px solid #1e1e1e; margin: 20px 0; padding-top: 20px;">
+                  <p>Your institutional vault has been successfully initialized.</p>
+                  <p>Investment Tier: <strong>${investmentTier} USD</strong></p>
+                  <p style="color: #64748b; font-size: 10px;">Security Hash: ${Math.random().toString(36).substring(7).toUpperCase()}</p>
+                </div>
+                <p style="font-size: 10px; color: #334155;">This is an automated dispatch. Do not reply.</p>
+              </div>
+            `
+          })
+        });
+      } catch (emailErr) {
+        console.warn("Email dispatch failed, but registration succeeded:", emailErr);
+      }
+
       // Auth listener in App will handle navigation
     } catch (err: any) {
       console.error("Registration error:", err);
