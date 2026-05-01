@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account information and balance",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "balance": { "type": "number" },
+        "kycStatus": { "type": "string", "enum": ["Pending", "Verified", "Rejected", "Not Set"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "balance", "kycStatus"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial ledger entries",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Deposit", "Withdraw"] },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "status": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "amount", "method", "status", "date"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Vehicle procurement orders",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "string" },
+        "image": { "type": "string" },
+        "status": { "type": "string" },
+        "orderDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "price", "status", "orderDate"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private user profile and balance"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Global transaction history (filtered by userId in rules)"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Global vehicle orders (filtered by userId in rules)"
+    }
+  }
+}

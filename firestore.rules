@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+    function isValidUser(data) {
+      let hasBase = data.keys().hasAll(['email', 'balance', 'kycStatus', 'createdAt']);
+      let hasFirstName = data.keys().hasAll(['firstName']) ? (data.firstName is string && data.firstName.size() <= 100) : true;
+      let hasTier = data.keys().hasAll(['investmentTier']) ? (data.investmentTier is string && data.investmentTier.size() <= 100) : true;
+      
+      return hasBase && hasFirstName && hasTier &&
+             data.email is string && data.email.size() <= 256 &&
+             data.balance is number &&
+             data.kycStatus in ['Pending', 'Verified', 'Rejected', 'Not Set'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'type', 'amount', 'method', 'status', 'date']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['Deposit', 'Withdraw'] &&
+             data.amount is number && data.amount > 0 &&
+             data.method is string && data.method.size() <= 100 &&
+             data.status is string && data.status.size() <= 50 &&
+             data.date is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'name', 'price', 'status', 'orderDate', 'image', 'stats']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.price is string && data.price.size() <= 50 &&
+             data.status is string && data.status.size() <= 50 &&
+             data.orderDate is timestamp &&
+             data.image is string &&
+             data.stats is map;
+    }
+
+    // Collection Matches
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().email == existing().email &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo']);
+    }
+
+    match /transactions/{transactionId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidTransaction(incoming()) && incoming().date == request.time;
+    }
+
+    match /orders/{orderId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidOrder(incoming()) && incoming().orderDate == request.time;
+    }
+  }
+}
