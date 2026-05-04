@@ -146,6 +146,23 @@ export default function DashboardPage() {
 
   const [chartFilter, setChartFilter] = useState<'Aggregate' | 'SpaceX' | 'xAI'>('Aggregate');
 
+  // Currency State
+  const currencyOptions = [
+    { code: 'USD', symbol: '$', rate: 1, label: 'USD' },
+    { code: 'EUR', symbol: '€', rate: 0.92, label: 'EUR' },
+    { code: 'GBP', symbol: '£', rate: 0.79, label: 'GBP' },
+    { code: 'NGN', symbol: '₦', rate: 1550, label: 'NGN' },
+  ];
+  const [selectedCurrency, setSelectedCurrency] = useState(currencyOptions[0]);
+
+  const formatPrice = (val: number) => {
+    const converted = val * selectedCurrency.rate;
+    return `${selectedCurrency.symbol}${converted.toLocaleString(undefined, { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    })}`;
+  };
+
   // Profile Management State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
@@ -605,7 +622,7 @@ export default function DashboardPage() {
                   <div>
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Enter Allocation Amount (USD)</label>
                     <div className="relative">
-                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">$</span>
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">{selectedCurrency.symbol}</span>
                       <input 
                         type="number"
                         value={depositAmount}
@@ -712,7 +729,7 @@ export default function DashboardPage() {
                     {paymentMethod !== 'bank' ? `Awaiting ${selectedCrypto?.ticker} Transfer` : 'Verification Initiated'}
                   </h3>
                   <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest leading-relaxed mb-8">
-                    Transfer instruction for <span className="text-white">${parseFloat(depositAmount).toLocaleString()}</span> via <span className="text-white">{(selectedCrypto?.name || paymentMethod).toUpperCase()}</span> generated. <br />
+                    Transfer instruction for <span className="text-white">{formatPrice(parseFloat(depositAmount))}</span> via <span className="text-white">{(selectedCrypto?.name || paymentMethod).toUpperCase()}</span> generated. <br />
                     {paymentMethod !== 'bank' ? 'Complete the manual transfer to the secure address below.' : 'Check your secure inbox for routing credentials.'}
                   </p>
 
@@ -822,10 +839,10 @@ export default function DashboardPage() {
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-panel p-10">
                   <div className="flex justify-between items-center mb-6">
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em]">Withdrawal Amount</label>
-                    <span className="text-[9px] font-mono text-slate-600 uppercase">Balance: ${(userData?.balance || 0).toLocaleString()}</span>
+                    <span className="text-[9px] font-mono text-slate-600 uppercase">Balance: {formatPrice(userData?.balance || 0)}</span>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">$</span>
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">{selectedCurrency.symbol}</span>
                     <input 
                       type="number"
                       value={withdrawAmount}
@@ -1148,6 +1165,21 @@ export default function DashboardPage() {
                 <p className="font-mono text-[10px] text-slate-500 uppercase tracking-[0.3em]">SECURE ACCESS SESSION: ACTIVE</p>
               </div>
               <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-xl">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest pl-2">Currency</span>
+                  <select 
+                    value={selectedCurrency.code}
+                    onChange={(e) => {
+                      const opt = currencyOptions.find(o => o.code === e.target.value);
+                      if (opt) setSelectedCurrency(opt);
+                    }}
+                    className="bg-black/40 border-none text-[10px] font-mono text-white uppercase focus:outline-none focus:ring-0 cursor-pointer py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    {currencyOptions.map(opt => (
+                      <option key={opt.code} value={opt.code} className="bg-slate-900">{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <button 
                   onClick={() => setActiveTab('my-projects')}
                   className="px-6 py-4 bg-brand-primary text-black font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] flex items-center gap-2 group"
@@ -1157,18 +1189,18 @@ export default function DashboardPage() {
                 </button>
                 <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl">
                   <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Available Balance</span>
-                  <span className="text-xl font-mono text-white font-bold">${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xl font-mono text-white font-bold">{formatPrice(currentBalance)}</span>
                 </div>
                 <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl">
                   <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Total Invested</span>
-                  <span className="text-xl font-mono text-brand-primary/80 font-bold">${totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xl font-mono text-brand-primary/80 font-bold">{formatPrice(totalInvested)}</span>
                 </div>
                 <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl relative group">
                   <div className="flex justify-between items-start mb-1">
                     <span className="text-[8px] font-mono text-emerald-500/60 uppercase block">Total Profit</span>
                   </div>
                   <span className="text-xl font-mono text-emerald-400 font-bold tracking-tighter">
-                    +${totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    +{formatPrice(totalProfit)}
                   </span>
                 </div>
                 <div className="px-6 py-4 card-panel bg-brand-primary/5 border-brand-primary/20 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.1)] group cursor-pointer" onClick={() => setActiveTab('my-projects')}>
@@ -1176,7 +1208,7 @@ export default function DashboardPage() {
                     <span className="text-[8px] font-mono text-brand-primary uppercase block font-bold">Net Portfolio Value</span>
                     <ArrowRight className="h-3 w-3 text-brand-primary opacity-0 group-hover:opacity-100 transition-all" />
                   </div>
-                  <span className="text-2xl font-mono text-white">${netPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] text-slate-500">USD</span></span>
+                  <span className="text-2xl font-mono text-white">{formatPrice(netPortfolioValue)}</span>
                 </div>
               </div>
             </div>
@@ -1307,11 +1339,11 @@ export default function DashboardPage() {
                       </div>
                       <div className="space-y-1 text-center">
                         <span className="text-[7px] font-mono text-slate-600 uppercase block">Profit</span>
-                        <span className="text-[10px] font-mono text-emerald-400 font-bold">+$12.4K</span>
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold">+{formatPrice(12400)}</span>
                       </div>
                       <div className="space-y-1 text-right">
                         <span className="text-[7px] font-mono text-slate-600 uppercase block">Net Stake</span>
-                        <span className="text-[10px] font-mono text-purple-400 font-bold">$87.4K</span>
+                        <span className="text-[10px] font-mono text-purple-400 font-bold">{formatPrice(87400)}</span>
                       </div>
                     </div>
                   </div>
@@ -1355,11 +1387,11 @@ export default function DashboardPage() {
                   <div className="pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Est. Yearly Profit</span>
-                      <span className="text-lg font-mono text-emerald-400 font-bold">+${calculatedProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-lg font-mono text-emerald-400 font-bold">+{formatPrice(calculatedProfit)}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Total Net Value</span>
-                      <span className="text-lg font-mono text-white font-bold">${(calcAmount + calculatedProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-lg font-mono text-white font-bold">{formatPrice(calcAmount + calculatedProfit)}</span>
                     </div>
                   </div>
                 </div>
@@ -1489,7 +1521,7 @@ export default function DashboardPage() {
                                tx.type === 'Investment' ? 'text-blue-400' :
                                'text-slate-300'
                              }`}>
-                               {tx.type === 'Deposit' ? '+' : '-'}${tx.amount.toLocaleString()}
+                               {tx.type === 'Deposit' ? '+' : '-'}{formatPrice(tx.amount)}
                              </p>
                              <p className="text-[8px] font-mono text-slate-600 uppercase mt-0.5">{tx.status}</p>
                           </div>
@@ -1749,7 +1781,7 @@ export default function DashboardPage() {
                             {tx.type} {tx.ticker ? `(${tx.ticker})` : ''}
                           </span>
                         </td>
-                        <td className="px-8 py-6 text-sm text-slate-300">${tx.amount.toLocaleString()}</td>
+                        <td className="px-8 py-6 text-sm text-slate-300">{formatPrice(tx.amount)}</td>
                         <td className="px-8 py-6 text-[10px] text-slate-600 uppercase italic">{tx.status}</td>
                         <td className="px-8 py-6 text-[10px] text-slate-600 uppercase font-mono">{tx.date?.toDate ? tx.date.toDate().toLocaleDateString() : new Date(tx.date).toLocaleDateString()}</td>
                       </tr>
@@ -1793,7 +1825,7 @@ export default function DashboardPage() {
                <div className="flex gap-4">
                   <div className="text-right">
                      <span className="text-[8px] font-mono text-slate-600 uppercase block">Committed Capital</span>
-                     <span className="text-xl font-mono text-white font-bold">${totalInvested.toLocaleString()}</span>
+                     <span className="text-xl font-mono text-white font-bold">{formatPrice(totalInvested)}</span>
                   </div>
                </div>
             </div>
@@ -1831,12 +1863,12 @@ export default function DashboardPage() {
                           <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
                              <div className="space-y-1">
                                 <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest block">Principal</span>
-                                <span className="text-sm font-mono text-white tracking-tight">${project.principal.toLocaleString()}</span>
+                                <span className="text-sm font-mono text-white tracking-tight">{formatPrice(project.principal)}</span>
                              </div>
                              <div className="space-y-1 text-right">
                                 <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest block">Unrealized Gain</span>
                                 <span className="text-sm font-mono tracking-tight text-emerald-400 font-bold">
-                                  +${project.profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                  +{formatPrice(project.profit)}
                                 </span>
                              </div>
                           </div>
@@ -1932,10 +1964,10 @@ export default function DashboardPage() {
                         <div>
                            <div className="flex justify-between items-center mb-2">
                               <label className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Investment Amount</label>
-                              <span className="text-[8px] font-mono text-brand-primary uppercase">Available: ${currentBalance.toLocaleString()}</span>
+                              <span className="text-[8px] font-mono text-brand-primary uppercase">Available: {formatPrice(currentBalance)}</span>
                            </div>
                            <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-mono text-slate-600">$</span>
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-mono text-slate-600">{selectedCurrency.symbol}</span>
                               <input 
                                 type="number"
                                 value={investAmount}
@@ -2338,7 +2370,7 @@ export default function DashboardPage() {
           
           <div className="text-right">
              <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest block">Vault Balance</span>
-             <span className="text-lg font-mono text-white font-bold">${(userData?.balance || 0).toLocaleString()}</span>
+             <span className="text-lg font-mono text-white font-bold">{formatPrice(userData?.balance || 0)}</span>
           </div>
         </div>
 
