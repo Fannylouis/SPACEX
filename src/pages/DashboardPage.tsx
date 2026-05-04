@@ -2286,10 +2286,11 @@ export default function DashboardPage() {
 
       {/* Dashboard Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-80 border-r border-white/5 bg-black/95 backdrop-blur-3xl lg:bg-black/20 lg:backdrop-blur-xl shrink-0 lg:flex flex-col lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) transform
+        fixed inset-y-0 left-0 z-50 w-80 border-r border-white/5 bg-black/95 backdrop-blur-3xl shrink-0 flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) transform
+        lg:bg-black/20 lg:backdrop-blur-xl lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-8 flex lg:hidden items-center justify-between border-b border-white/5">
+        <div className="p-8 flex lg:hidden items-center justify-between border-b border-white/5 shrink-0">
           <div>
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary block mb-1">Navigation Console</span>
             <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Version 4.2.0-Alpha</span>
@@ -2302,7 +2303,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div className="flex-grow overflow-y-auto overflow-x-hidden scrollbar-hide py-8 px-4">
+        <div className="flex-grow overflow-y-auto overflow-x-hidden py-8 px-4">
           <div className="space-y-10">
             {['Main', 'Financial', 'AI Intel', 'Assets', 'Protocol'].map((category) => (
               <div key={category} className="space-y-2">
@@ -2354,7 +2355,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="p-6 border-t border-white/5">
+        <div className="p-6 border-t border-white/5 shrink-0">
           <button 
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-mono text-red-500 hover:bg-red-500/5 transition-all uppercase tracking-widest"
