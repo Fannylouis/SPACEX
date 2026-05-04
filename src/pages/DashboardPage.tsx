@@ -373,6 +373,18 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showBankInstructions, setShowBankInstructions] = useState(false);
   
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isSidebarOpen]);
+
   // Investment States
   const [selectedAssetForInvest, setSelectedAssetForInvest] = useState<any>(null);
   const [investAmount, setInvestAmount] = useState('');
@@ -2274,41 +2286,53 @@ export default function DashboardPage() {
 
       {/* Dashboard Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 border-r border-white/5 bg-black/80 backdrop-blur-2xl lg:bg-black/20 lg:backdrop-blur-xl shrink-0 lg:flex flex-col lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24 transition-transform duration-300 transform
+        fixed inset-y-0 left-0 z-50 w-80 border-r border-white/5 bg-black/95 backdrop-blur-3xl lg:bg-black/20 lg:backdrop-blur-xl shrink-0 lg:flex flex-col lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) transform
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 flex lg:hidden items-center justify-between mb-4 border-b border-white/5">
-          <span className="font-mono text-xs font-bold uppercase tracking-widest text-brand-primary">Console Menu</span>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/5 rounded-lg">
-            <X className="h-5 w-5 text-slate-500" />
+        <div className="p-8 flex lg:hidden items-center justify-between border-b border-white/5">
+          <div>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary block mb-1">Navigation Console</span>
+            <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Version 4.2.0-Alpha</span>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(false)} 
+            className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+          >
+            <X className="h-5 w-5 text-slate-400" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-grow scrollbar-hide">
-          <div className="space-y-8">
+        <div className="flex-grow overflow-y-auto overflow-x-hidden scrollbar-hide py-8 px-4">
+          <div className="space-y-10">
             {['Main', 'Financial', 'AI Intel', 'Assets', 'Protocol'].map((category) => (
-              <div key={category} className="space-y-1">
-                <h4 className="px-4 text-[9px] font-mono font-bold uppercase tracking-[0.3em] text-slate-600 mb-2">{category}</h4>
-                {sidebarItems.filter(item => item.category === category).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                        setActiveTab(item.id);
-                        setIsSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-xs font-mono transition-all group ${
-                      activeTab === item.id 
-                        ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' 
-                        : 'text-slate-500 hover:text-white hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className={`h-4 w-4 ${activeTab === item.id ? 'text-brand-primary' : 'text-slate-600'}`} />
-                      <span className="uppercase tracking-widest">{item.label}</span>
-                    </div>
-                    {activeTab === item.id && <ChevronRight className="h-3 w-3" />}
-                  </button>
-                ))}
+              <div key={category} className="space-y-2">
+                <h4 className="px-5 text-[9px] font-mono font-bold uppercase tracking-[0.4em] text-slate-600 mb-4">{category}</h4>
+                <div className="space-y-1">
+                  {sidebarItems.filter(item => item.category === category).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                          setActiveTab(item.id);
+                          setIsSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-5 py-4 rounded-xl text-[11px] font-mono transition-all group ${
+                        activeTab === item.id 
+                          ? 'bg-brand-primary text-black font-bold shadow-[0_0_20px_rgba(59,130,246,0.2)]' 
+                          : 'text-slate-500 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'text-black' : 'text-slate-600 group-hover:text-brand-primary transition-colors'}`} />
+                        <span className="uppercase tracking-[0.15em]">{item.label}</span>
+                      </div>
+                      {activeTab === item.id ? (
+                        <div className="w-1.5 h-1.5 bg-black rounded-full" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             ))}
 
@@ -2344,18 +2368,21 @@ export default function DashboardPage() {
       {/* Main Console Viewport */}
       <div className="flex-grow">
         {/* Mobile Nav Header */}
-        <div className="lg:hidden px-6 pt-8 flex items-center justify-between">
+        <div className="lg:hidden px-6 pt-10 flex items-center justify-between sticky top-0 bg-black/40 backdrop-blur-md z-30 pb-4">
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3 text-slate-400"
+            className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 text-slate-300 hover:bg-white/10 transition-all active:scale-95"
           >
-            <Menu className="h-5 w-5" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Open Console</span>
+            <div className="relative">
+              <Menu className="h-6 w-6" />
+              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-brand-primary rounded-full border-2 border-black" />
+            </div>
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.2em]">Access Console</span>
           </button>
           
           <div className="text-right">
-             <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest block">Vault Balance</span>
-             <span className="text-lg font-mono text-white font-bold">{formatPrice(userData?.balance || 0)}</span>
+             <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em] block mb-1">Vault Balance</span>
+             <span className="text-xl font-mono text-white font-bold tracking-tight">{formatPrice(userData?.balance || 0)}</span>
           </div>
         </div>
 

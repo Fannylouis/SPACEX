@@ -57,8 +57,12 @@ export default function LoginPage() {
         setError('Login popup was blocked by your browser. Please allow popups for this site and try again.');
       } else if (err.code === 'auth/popup-closed-by-user') {
         setError('Login attempt was cancelled. Please complete the sign-in process in the popup window.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized for Google Sign-in. Please add this URL to your Firebase Console authorized domains.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Google Sign-in is not enabled in your Firebase Project. Please enable it in the Firebase Console.');
       } else {
-        setError('Google synchronization failed. Please ensure popups are permitted and verify your internet connection.');
+        setError(`Google synchronization failed (${err.code || 'unknown'}). Please ensure popups are permitted and verify your internet connection.`);
       }
       setLoading(false);
     }
