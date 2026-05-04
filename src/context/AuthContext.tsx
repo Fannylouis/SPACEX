@@ -22,7 +22,9 @@ interface UserData {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
-  investmentTier: string | null;
+  country?: string | null;
+  phoneNumber?: string | null;
+  gender?: string | null;
   dateOfBirth?: string | null;
   balance: number;
   kycStatus: string;
@@ -36,7 +38,16 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, firstName: string, lastName: string, investmentTier: string, dob: string) => Promise<void>;
+  signUp: (
+    email: string, 
+    pass: string, 
+    firstName: string, 
+    lastName: string, 
+    dob: string,
+    country: string,
+    phoneNumber: string,
+    gender: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -131,16 +142,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, pass: string, firstName: string, lastName: string, investmentTier: string, dob: string) => {
+  const signUp = async (
+    email: string, 
+    pass: string, 
+    firstName: string, 
+    lastName: string, 
+    dob: string,
+    country: string,
+    phoneNumber: string,
+    gender: string
+  ) => {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-      // Explicitly create user doc with firstName, lastName and investmentTier
+      // Explicitly create user doc
       const userRef = doc(db, 'users', user.uid);
       const newUserData = {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        investmentTier: investmentTier,
+        country: country,
+        phoneNumber: phoneNumber,
+        gender: gender,
         dateOfBirth: dob,
         balance: 0,
         kycStatus: 'Not Set',

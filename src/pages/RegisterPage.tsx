@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, UserPlus, Eye, EyeOff, ArrowRight, ShieldCheck, Chrome, Calendar } from 'lucide-react';
+import { Mail, Lock, UserPlus, Eye, EyeOff, ArrowRight, ShieldCheck, Chrome, Calendar, Globe, Phone, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -14,7 +14,9 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [investmentTier, setInvestmentTier] = useState('0 - 1000');
+  const [country, setCountry] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,12 +37,13 @@ export default function RegisterPage() {
       return;
     }
 
-    // Age Validation
-    if (!dateOfBirth) {
-      setError('Date of Birth is required for protocol clearance.');
+    // General Validation
+    if (!firstName || !lastName || !dateOfBirth || !country || !phone || !gender || !email || !password) {
+      setError('All synchronization parameters must be initialized.');
       return;
     }
 
+    // Age Validation
     const birthDate = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -59,10 +62,10 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-      await signUp(email, password, firstName, lastName, investmentTier, dateOfBirth);
+      await signUp(email, password, firstName, lastName, dateOfBirth, country, phone, gender);
       
       // Dispatch Confirmation Email via utility
-      await sendConfirmationEmail(email, 'signup', { firstName, lastName, investmentTier });
+      await sendConfirmationEmail(email, 'signup', { firstName, lastName });
 
       // Auth listener in App will handle navigation
     } catch (err: any) {
@@ -174,24 +177,60 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Investment Tier ($)</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <ShieldCheck className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Country</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Globe className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. United States"
+                      required
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
+                    />
                   </div>
-                  <select 
-                    required
-                    value={investmentTier}
-                    onChange={(e) => setInvestmentTier(e.target.value)}
-                    className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white appearance-none focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
-                  >
-                    <option value="0 - 1000">{formatPrice(0)} - {formatPrice(1000)}</option>
-                    <option value="1000 - 10000">{formatPrice(1000)} - {formatPrice(10000)}</option>
-                    <option value="10000 - 50000">{formatPrice(10000)} - {formatPrice(50000)}</option>
-                    <option value="50000 - 100000">{formatPrice(50000)} - {formatPrice(100000)}</option>
-                    <option value="100000+">{formatPrice(100000)}+</option>
-                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Phone Number</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Phone className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                    </div>
+                    <input 
+                      type="tel" 
+                      placeholder="+1 (555) 000-0000"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Gender</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Users className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                    </div>
+                    <select 
+                      required
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white appearance-none focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
+                    >
+                      <option value="" disabled className="text-slate-800">Select Gender</option>
+                      <option value="Male" className="bg-slate-900">Male</option>
+                      <option value="Female" className="bg-slate-900">Female</option>
+                      <option value="Other" className="bg-slate-900">Other</option>
+                      <option value="Prefer not to say" className="bg-slate-900">Prefer not to say</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 

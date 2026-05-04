@@ -18,7 +18,6 @@ export async function sendConfirmationEmail(to: string, type: 'signup' | 'login'
           <p style="color: #64748b; font-size: 12px; text-transform: uppercase;">Identity: ${data?.firstName || ''} ${data?.lastName || ''}</p>
           <div style="border-top: 1px solid #1e1e1e; margin: 20px 0; padding-top: 20px;">
             <p>Your institutional vault has been successfully initialized.</p>
-            <p>Investment Tier: <strong>${data?.investmentTier || 'Standard'} USD</strong></p>
             <p style="color: #64748b; font-size: 10px;">Security Hash: ${securityHash}</p>
           </div>
           <p style="font-size: 10px; color: #334155;">This is an automated dispatch. Do not reply.</p>
