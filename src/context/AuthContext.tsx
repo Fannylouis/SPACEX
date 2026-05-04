@@ -23,6 +23,7 @@ interface UserData {
   firstName: string | null;
   lastName: string | null;
   investmentTier: string | null;
+  dateOfBirth?: string | null;
   balance: number;
   kycStatus: string;
   createdAt: any;
@@ -35,7 +36,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, firstName: string, lastName: string, investmentTier: string) => Promise<void>;
+  signUp: (email: string, pass: string, firstName: string, lastName: string, investmentTier: string, dob: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, pass: string, firstName: string, lastName: string, investmentTier: string) => {
+  const signUp = async (email: string, pass: string, firstName: string, lastName: string, investmentTier: string, dob: string) => {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, pass);
       // Explicitly create user doc with firstName, lastName and investmentTier
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firstName: firstName,
         lastName: lastName,
         investmentTier: investmentTier,
+        dateOfBirth: dob,
         balance: 0,
         kycStatus: 'Not Set',
         createdAt: serverTimestamp()

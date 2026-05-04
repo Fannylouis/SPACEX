@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useCurrency, currencyOptions } from '../context/CurrencyContext';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -45,7 +47,6 @@ import {
   BarChart,
   Bar
 } from 'recharts';
-import { useAuth } from '../context/AuthContext';
 import { sendConfirmationEmail } from '../lib/email';
 import { 
   collection, 
@@ -146,22 +147,7 @@ export default function DashboardPage() {
 
   const [chartFilter, setChartFilter] = useState<'Aggregate' | 'SpaceX' | 'xAI'>('Aggregate');
 
-  // Currency State
-  const currencyOptions = [
-    { code: 'USD', symbol: '$', rate: 1, label: 'USD' },
-    { code: 'EUR', symbol: '€', rate: 0.92, label: 'EUR' },
-    { code: 'GBP', symbol: '£', rate: 0.79, label: 'GBP' },
-    { code: 'NGN', symbol: '₦', rate: 1550, label: 'NGN' },
-  ];
-  const [selectedCurrency, setSelectedCurrency] = useState(currencyOptions[0]);
-
-  const formatPrice = (val: number) => {
-    const converted = val * selectedCurrency.rate;
-    return `${selectedCurrency.symbol}${converted.toLocaleString(undefined, { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
-    })}`;
-  };
+  const { selectedCurrency, setCurrencyByCode, formatPrice } = useCurrency();
 
   // Profile Management State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -1169,10 +1155,7 @@ export default function DashboardPage() {
                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest pl-2">Currency</span>
                   <select 
                     value={selectedCurrency.code}
-                    onChange={(e) => {
-                      const opt = currencyOptions.find(o => o.code === e.target.value);
-                      if (opt) setSelectedCurrency(opt);
-                    }}
+                    onChange={(e) => setCurrencyByCode(e.target.value)}
                     className="bg-black/40 border-none text-[10px] font-mono text-white uppercase focus:outline-none focus:ring-0 cursor-pointer py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     {currencyOptions.map(opt => (

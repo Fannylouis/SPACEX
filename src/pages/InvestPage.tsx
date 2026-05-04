@@ -3,9 +3,11 @@ import { motion } from 'motion/react';
 import { ShieldCheck, TrendingUp, Lock, Rocket, Target, Globe, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 export default function InvestPage() {
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
 
   return (
     <div className="pt-24 min-h-screen">
@@ -98,7 +100,7 @@ export default function InvestPage() {
               title="Starlink Series C"
               status="Closing Soon"
               roi="12.4% Est."
-              min="10,000 USD"
+              min={10000}
               icon={Globe}
               description="Global satellite mesh network expansion and direct-to-cell infrastructure."
             />
@@ -106,7 +108,7 @@ export default function InvestPage() {
               title="Mars Colony Fund II"
               status="Open"
               roi="15% Est."
-              min="50,000 USD"
+              min={50000}
               icon={Rocket}
               description="Capital allocation for long-range habitation modules and propulsion testing."
             />
@@ -114,7 +116,7 @@ export default function InvestPage() {
               title="Lunar Logistics V"
               status="Limited"
               roi="13% Est."
-              min="25,000 USD"
+              min={25000}
               icon={Target}
               description="Surface transport and resource extraction logistics for Artemis-support missions."
             />
@@ -156,9 +158,10 @@ function PromoCard({ title, desc, icon: Icon }: { title: string; desc: string; i
 }
 
 function OpportunityCard({ title, status, roi, min, icon: Icon, description }: { 
-  title: string; status: string; roi: string; min: string; icon: any; description: string 
+  title: string; status: string; roi: string; min: number; icon: any; description: string 
 }) {
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   return (
     <Link 
       to={user ? "/invest/dashboard" : "/invest/login"}
@@ -186,7 +189,7 @@ function OpportunityCard({ title, status, roi, min, icon: Icon, description }: {
         </div>
         <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest">
           <span className="text-slate-500">Minimum Lockup</span>
-          <span className="text-white">{min}</span>
+          <span className="text-white">{formatPrice(min)}</span>
         </div>
       </div>
     </Link>

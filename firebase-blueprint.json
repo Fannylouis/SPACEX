@@ -6,6 +6,10 @@
       "type": "object",
       "properties": {
         "email": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "investmentTier": { "type": "string" },
+        "dateOfBirth": { "type": "string", "format": "date" },
         "balance": { "type": "number" },
         "kycStatus": { "type": "string", "enum": ["Pending", "Verified", "Rejected", "Not Set"] },
         "createdAt": { "type": "string", "format": "date-time" }

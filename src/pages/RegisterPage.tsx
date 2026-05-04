@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, UserPlus, Eye, EyeOff, ArrowRight, ShieldCheck, Chrome } from 'lucide-react';
+import { Mail, Lock, UserPlus, Eye, EyeOff, ArrowRight, ShieldCheck, Chrome, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 import { sendConfirmationEmail } from '../lib/email';
 
 export default function RegisterPage() {
+  const { formatPrice } = useCurrency();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [investmentTier, setInvestmentTier] = useState('0 - 1000');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +34,32 @@ export default function RegisterPage() {
       setError('You must accept the Quantum Encryption Standards.');
       return;
     }
+
+    // Age Validation
+    if (!dateOfBirth) {
+      setError('Date of Birth is required for protocol clearance.');
+      return;
+    }
+
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 18) {
+      setError('Access Denied: You must be at least 18 years of age to initialize a vault.');
+      setLoading(false);
+      return;
+    }
+
     setError(null);
     setLoading(true);
     
     try {
-      await signUp(email, password, firstName, lastName, investmentTier);
+      await signUp(email, password, firstName, lastName, investmentTier, dateOfBirth);
       
       // Dispatch Confirmation Email via utility
       await sendConfirmationEmail(email, 'signup', { firstName, lastName, investmentTier });
@@ -135,6 +159,22 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Date of Birth</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Calendar className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                  </div>
+                  <input 
+                    type="date" 
+                    required
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Investment Tier ($)</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -146,11 +186,11 @@ export default function RegisterPage() {
                     onChange={(e) => setInvestmentTier(e.target.value)}
                     className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white appearance-none focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
                   >
-                    <option value="0 - 1000">0 - 1,000</option>
-                    <option value="1000 - 10000">1,000 - 10,000</option>
-                    <option value="10000 - 50000">10,000 - 50,000</option>
-                    <option value="50000 - 100000">50,000 - 100,000</option>
-                    <option value="100000+">100,000+</option>
+                    <option value="0 - 1000">{formatPrice(0)} - {formatPrice(1000)}</option>
+                    <option value="1000 - 10000">{formatPrice(1000)} - {formatPrice(10000)}</option>
+                    <option value="10000 - 50000">{formatPrice(10000)} - {formatPrice(50000)}</option>
+                    <option value="50000 - 100000">{formatPrice(50000)} - {formatPrice(100000)}</option>
+                    <option value="100000+">{formatPrice(100000)}+</option>
                   </select>
                 </div>
               </div>

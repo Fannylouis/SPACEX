@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Zap, Gauge, Battery, ArrowRight, MapPin, ClipboardList, Wallet, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 
@@ -12,7 +13,8 @@ const cars = [
     tagline: "Beyond Ludicrous.",
     description: "Model S Plaid has the lowest drag coefficient on Earth, featuring a revolutionary tri-motor powertrain with carbon-sleeved rotors. It delivers 1,020 horsepower consistently up to its 200 mph top speed.",
     specs: { acceleration: "1.99s", range: "359mi", topSpeed: "200mph", peakPower: "1,020 hp" },
-    price: "From $89,990",
+    price: 89990,
+    prefix: "From ",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/MODEL%20S.jpg?w=800&h=450",
     color: "#ef4444"
   },
@@ -21,7 +23,8 @@ const cars = [
     tagline: "Built for any planet.",
     description: "Constructed from Ultra-Hard 30X Cold-Rolled stainless-steel, the Cybertruck is an armored personnel carrier for the civilian world. Features 11,000 lbs towing capacity and Extract Mode ground clearance.",
     specs: { acceleration: "2.6s", range: "340mi", towing: "11,000 lbs", clearance: "17\"" },
-    price: "From $79,990",
+    price: 79990,
+    prefix: "From ",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/awd-cybertruck.jpg?w=800&h=450",
     color: "#94a3b8"
   },
@@ -30,7 +33,8 @@ const cars = [
     tagline: "The SUV of the future.",
     description: "With the most storage space and towing capacity of any electric SUV, and the highest performance, Model X Plaid is the ultimate family vehicle. Features signature Falcon Wing doors for easy access.",
     specs: { acceleration: "2.5s", range: "326mi", doors: "Falcon Wing", storage: "88 cu ft" },
-    price: "From $94,990",
+    price: 94990,
+    prefix: "From ",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PLAID/download.jpg?w=800&h=450",
     color: "#9333ea"
   },
@@ -39,7 +43,8 @@ const cars = [
     tagline: "Designed for performance.",
     description: "The Model 3 Performance features a bespoke performance-tuned chassis, forged wheels, and high-performance brakes. Track Mode V3 allows for customized power split and regenerative braking.",
     specs: { acceleration: "2.9s", range: "303mi", topSpeed: "163mph", drive: "AWD" },
-    price: "From $54,990",
+    price: 54990,
+    prefix: "From ",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/2025_tesla_model-3_sedan_performance_fq_oem_1_815.avif?w=800&h=450",
     color: "#ef4444"
   },
@@ -48,7 +53,8 @@ const cars = [
     tagline: "Apex of speed. Rocket thrusters.",
     description: "The quickest car in the world, with record-setting acceleration, range and performance. Developed with SpaceX Cold Gas Thruster technology to achieve sub-2.0s acceleration and extreme cornering physics.",
     specs: { acceleration: "1.1s*", range: "620mi", topSpeed: "250mph+", torque: "10,000 Nm" },
-    price: "$250,000 (Reservation)",
+    price: 250000,
+    suffix: " (Reservation)",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/Tesla-Model-Roadster-2-P4.webp?w=800&h=450",
     color: "#dc2626"
   },
@@ -57,7 +63,8 @@ const cars = [
     tagline: "The future of heavy transport.",
     description: "Semi is equipped with a tri-motor system and independent motors on the rear axles for unparalleled traction and efficiency. Fully loaded, it reaches 60 mph in 20 seconds with sub-2 kWh/mi energy consumption.",
     specs: { acceleration: "5s (Empty)", range: "500mi", payload: "82,000 lbs", motors: "Tri-Motor" },
-    price: "$150,000 (Inquiry)",
+    price: 150000,
+    suffix: " (Inquiry)",
     image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/tesla-semi-standard-range-production-version-4.avif?w=800&h=450",
     color: "#334155"
   }
@@ -66,14 +73,11 @@ const cars = [
 export default function ShopPage() {
   const navigate = useNavigate();
   const { user, userData } = useAuth();
+  const { formatPrice } = useCurrency();
   const [selectedCar, setSelectedCar] = React.useState<any>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
   const [deliveryInfo, setDeliveryInfo] = React.useState({ address: '', details: '' });
   const [isProcessing, setIsProcessing] = React.useState(false);
-
-  const getPriceValue = (priceStr: string) => {
-    return parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-  };
 
   const handleOrder = (car: any) => {
     if (!user) {
@@ -81,7 +85,7 @@ export default function ShopPage() {
       return;
     }
 
-    const price = getPriceValue(car.price);
+    const price = car.price;
     const balance = userData?.balance || 0;
 
     if (balance < price) {
@@ -98,7 +102,7 @@ export default function ShopPage() {
     if (!user || !selectedCar || !deliveryInfo.address) return;
 
     setIsProcessing(true);
-    const price = getPriceValue(selectedCar.price);
+    const price = selectedCar.price;
 
     try {
       // 1. Create order
@@ -225,7 +229,7 @@ export default function ShopPage() {
                       <h3 className="text-lg font-bold text-white uppercase tracking-tight">{selectedCar.name}</h3>
                       <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Unit Price</p>
                     </div>
-                    <p className="text-2xl font-mono text-brand-primary font-bold">{selectedCar.price}</p>
+                    <p className="text-2xl font-mono text-brand-primary font-bold">{selectedCar.prefix || ''}{formatPrice(selectedCar.price)}{selectedCar.suffix || ''}</p>
                   </div>
                 </div>
 
@@ -263,12 +267,12 @@ export default function ShopPage() {
                     <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Available Resources</p>
                     <div className="flex items-center gap-2">
                       <Wallet className="h-4 w-4 text-brand-primary" />
-                      <span className="text-xl font-mono text-white font-bold">${(userData?.balance || 0).toLocaleString()}</span>
+                      <span className="text-xl font-mono text-white font-bold">{formatPrice(userData?.balance || 0)}</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Transaction Total</p>
-                    <p className="text-xl font-mono text-white font-bold">-${getPriceValue(selectedCar.price).toLocaleString()}</p>
+                    <p className="text-xl font-mono text-white font-bold">-{formatPrice(selectedCar.price)}</p>
                   </div>
                 </div>
 
@@ -362,7 +366,7 @@ export default function ShopPage() {
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
                   <div>
                     <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">MSRP</p>
-                    <p className="text-xl font-mono text-white tracking-tight">{car.price}</p>
+                    <p className="text-xl font-mono text-white tracking-tight">{car.prefix || ''}{formatPrice(car.price)}{car.suffix || ''}</p>
                   </div>
                   <button 
                     onClick={() => handleOrder(car)}

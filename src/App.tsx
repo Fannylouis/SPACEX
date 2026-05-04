@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProjectsPage from './pages/ProjectsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import { ShieldCheck, Activity } from 'lucide-react';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -78,11 +79,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <CurrencyProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </CurrencyProvider>
   );
 }
 
