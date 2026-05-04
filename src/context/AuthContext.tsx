@@ -138,9 +138,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Error signing in:", error);
+      console.log("Initiating Google Sign-in popup...");
+      const result = await signInWithPopup(auth, provider);
+      console.log("Google Sign-in successful for user:", result.user.email);
+    } catch (error: any) {
+      console.error("Firebase Auth Error in signInWithPopup:", error.code, error.message);
       throw error;
     }
   };

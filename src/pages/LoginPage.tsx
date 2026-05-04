@@ -53,7 +53,13 @@ export default function LoginPage() {
       await signIn();
     } catch (err: any) {
       console.error("Google login error:", err);
-      setError('Google synchronization failed. Please ensure popups are permitted.');
+      if (err.code === 'auth/popup-blocked') {
+        setError('Login popup was blocked by your browser. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Login attempt was cancelled. Please complete the sign-in process in the popup window.');
+      } else {
+        setError('Google synchronization failed. Please ensure popups are permitted and verify your internet connection.');
+      }
       setLoading(false);
     }
   };

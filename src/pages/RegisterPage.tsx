@@ -91,7 +91,13 @@ export default function RegisterPage() {
       // Auth changes will trigger navigation automatically via user useEffect
     } catch (err: any) {
       console.error("Google login error:", err);
-      setError('Google synchronization failed. Please ensure popups are permitted.');
+      if (err.code === 'auth/popup-blocked') {
+        setError('Signup popup was blocked by your browser. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Signup attempt was cancelled. Please complete the sign-in process in the popup window.');
+      } else {
+        setError('Google synchronization failed. Please ensure popups are permitted and verify your internet connection.');
+      }
       setLoading(false);
     }
   };
