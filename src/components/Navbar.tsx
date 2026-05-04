@@ -8,6 +8,7 @@ import { useCurrency, currencyOptions } from '../context/CurrencyContext';
 export default function Navbar() {
   const { user } = useAuth();
   const { selectedCurrency, setCurrencyByCode } = useCurrency();
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   
   return (
     <motion.nav 
@@ -16,17 +17,17 @@ export default function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/5"
       id="navbar"
     >
-      <div className="max-w-7xl mx-auto px-12 h-24 flex items-center justify-between">
-        <div className="flex items-center gap-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 h-20 md:h-24 flex items-center justify-between">
+        <div className="flex items-center gap-4 md:gap-12">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-cyan-300 rounded-sm rotate-45 flex items-center justify-center">
-              <div className="w-4 h-4 bg-black rounded-sm"></div>
+            <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-tr from-blue-500 to-cyan-300 rounded-sm rotate-45 flex items-center justify-center">
+              <div className="w-3 h-3 md:w-4 md:h-4 bg-black rounded-sm"></div>
             </div>
-            <span className="text-xl font-bold tracking-widest uppercase text-white">SpaceX</span>
+            <span className="text-lg md:text-xl font-bold tracking-widest uppercase text-white">SpaceX</span>
           </Link>
 
           {/* Currency Selector */}
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
+          <div className="flex items-center gap-2 md:gap-3 bg-white/5 border border-white/10 px-2 md:px-3 py-1 md:py-1.5 rounded-lg">
             <Globe className="h-3 w-3 text-slate-500" />
             <select 
               value={selectedCurrency.code}
@@ -40,7 +41,9 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-10 text-[10px] font-bold tracking-[0.3em] uppercase">
+          <NavLink to="/" label="Home" />
           <NavLink to="/shop" label="Shop" />
           <NavLink to="/projects" label="Projects" />
           <NavLink to="/invest" label="Invest" />
@@ -51,7 +54,38 @@ export default function Navbar() {
             {user ? "Dashboard" : "Account"}
           </Link>
         </div>
+
+        {/* Mobile menu button */}
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="md:hidden p-2 text-white hover:text-brand-primary transition-colors"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
       </div>
+
+      {/* Mobile Nav Overlay */}
+      {isMenuOpen && (
+        <motion.div 
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="md:hidden bg-black border-t border-white/5 px-6 py-8 space-y-6"
+        >
+          <div className="flex flex-col gap-6 text-[10px] font-bold tracking-[0.3em] uppercase">
+            <Link to="/" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Home</Link>
+            <Link to="/shop" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Shop</Link>
+            <Link to="/projects" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Projects</Link>
+            <Link to="/invest" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Invest</Link>
+            <Link 
+              to={user ? "/invest/dashboard" : "/invest/login"} 
+              onClick={() => setIsMenuOpen(false)}
+              className="w-full text-center py-4 border border-brand-primary/50 rounded bg-brand-primary/5 text-brand-primary font-bold"
+            >
+              {user ? "Dashboard" : "Account"}
+            </Link>
+          </div>
+        </motion.div>
+      )}
     </motion.nav>
   );
 }

