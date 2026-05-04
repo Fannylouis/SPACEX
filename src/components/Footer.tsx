@@ -8,11 +8,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-12">
         <div className="grid md:grid-cols-4 gap-12 mb-20">
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-8">
-              <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-cyan-300 rounded-sm rotate-45 flex items-center justify-center">
-                <div className="w-4 h-4 bg-black rounded-sm"></div>
-              </div>
-              <span className="text-xl font-bold tracking-widest uppercase text-white">SpaceX</span>
+            <div className="flex items-center gap-3 mb-8">
+              <img src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" alt="SpaceX" className="h-48 object-contain brightness-110" referrerPolicy="no-referrer" />
             </div>
             <p className="text-slate-500 max-w-sm mb-8 leading-relaxed text-sm">
               Securing institutional exposure to the high-growth private frontier. Specialist secondary market protocols for aerospace and artificial intelligence infrastructure.

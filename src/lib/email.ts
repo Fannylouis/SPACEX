@@ -462,6 +462,14 @@ export async function sendConfirmationEmail(to: string, type: 'signup' | 'login'
         </html>
       `;
       break;
+    default:
+      console.error(`Unknown email type: ${type}`);
+      return { success: false, error: 'Invalid email type' };
+  }
+
+  if (!subject || !html) {
+    console.error(`Email content missing for type: ${type}`);
+    return { success: false, error: 'Email content generation failed' };
   }
 
   try {

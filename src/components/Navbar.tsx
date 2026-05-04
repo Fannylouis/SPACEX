@@ -19,11 +19,8 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 md:px-12 h-20 md:h-24 flex items-center justify-between">
         <div className="flex items-center gap-4 md:gap-12">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-tr from-blue-500 to-cyan-300 rounded-sm rotate-45 flex items-center justify-center">
-              <div className="w-3 h-3 md:w-4 md:h-4 bg-black rounded-sm"></div>
-            </div>
-            <span className="text-lg md:text-xl font-bold tracking-widest uppercase text-white">SpaceX</span>
+          <Link to="/" className="flex items-center gap-3">
+            <img src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" alt="SpaceX" className="h-32 md:h-48 object-contain brightness-110" referrerPolicy="no-referrer" />
           </Link>
 
           {/* Currency Selector */}
@@ -47,6 +44,15 @@ export default function Navbar() {
           <NavLink to="/shop" label="Shop" />
           <NavLink to="/projects" label="Projects" />
           <NavLink to="/invest" label="Invest" />
+          {user?.email === 'mgbemere3@gmail.com' && (
+            <Link 
+              to="/admin" 
+              className="px-4 py-2 bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:bg-brand-primary hover:text-black transition-all flex items-center gap-2"
+            >
+              <Shield className="h-3 w-3" />
+              Admin Portal
+            </Link>
+          )}
           <Link 
             to={user ? "/invest/dashboard" : "/invest/login"} 
             className="px-6 py-2.5 border border-brand-primary/50 rounded bg-brand-primary/5 text-brand-primary cursor-pointer hover:bg-brand-primary/10 transition-all font-bold"
@@ -76,6 +82,16 @@ export default function Navbar() {
             <Link to="/shop" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Shop</Link>
             <Link to="/projects" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Projects</Link>
             <Link to="/invest" onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-white transition-colors">Invest</Link>
+            {user?.email === 'mgbemere3@gmail.com' && (
+              <Link 
+                to="/admin" 
+                onClick={() => setIsMenuOpen(false)}
+                className="w-full text-center py-4 border border-brand-primary/20 rounded bg-brand-primary/5 text-brand-primary font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <Shield className="h-4 w-4" />
+                Admin Portal
+              </Link>
+            )}
             <Link 
               to={user ? "/invest/dashboard" : "/invest/login"} 
               onClick={() => setIsMenuOpen(false)}

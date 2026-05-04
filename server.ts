@@ -39,15 +39,29 @@ async function startServer() {
 
     if (resendClient) {
       try {
+        // Validation: Ensure required fields are present
+        if (!to || !subject || !html) {
+          const missing = [];
+          if (!to) missing.push("recipient");
+          if (!subject) missing.push("subject");
+          if (!html) missing.push("content");
+          
+          console.error("[Resend Error] Missing mandatory fields:", missing.join(", "));
+          return res.status(400).json({ 
+            success: false, 
+            error: { name: "local_validation_error", message: `Missing mandatory fields: ${missing.join(", ")}` } 
+          });
+        }
+
         const { data, error } = await resendClient.emails.send({
-          from: "onboarding@resend.dev",
-          to: to,
-          subject,
-          html,
+          from: "SpaceX Vault <onboarding@resend.dev>",
+          to: Array.isArray(to) ? to : [to], // Force array to be safe
+          subject: String(subject),
+          html: String(html),
         });
 
         if (error) {
-          console.error("[Resend Error]", error);
+          console.error("[Resend Error Detail]", JSON.stringify(error, null, 2));
           return res.status(400).json({ success: false, error });
         }
         

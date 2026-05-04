@@ -16,6 +16,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { sendWelcomeEmail, sendLoginAlert } from '../services/emailService';
 
 interface UserData {
   uid: string;
@@ -27,7 +28,9 @@ interface UserData {
   gender?: string | null;
   dateOfBirth?: string | null;
   balance: number;
+  totalProfit?: number;
   kycStatus: string;
+  lastDividendAt?: any;
   createdAt: any;
   is2FAEnabled?: boolean;
 }
@@ -97,10 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               dateOfBirth: 'Not Set',
               balance: 0,
               kycStatus: 'Not Set',
+              lastDividendAt: serverTimestamp(),
               createdAt: serverTimestamp()
             };
             try {
                await setDoc(userRef, newUserData);
+               // Send welcome email for new social signup
+               if (authUser.email) {
+                 sendWelcomeEmail(authUser.email, firstName).catch(console.error);
+               }
             } catch (error) {
                handleFirestoreError(error, OperationType.CREATE, `users/${authUser.uid}`);
             }
@@ -141,6 +149,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Initiating Google Sign-in popup...");
       const result = await signInWithPopup(auth, provider);
       console.log("Google Sign-in successful for user:", result.user.email);
+      // Send login alert
+      if (result.user.email) {
+        sendLoginAlert(result.user.email).catch(console.error);
+      }
     } catch (error: any) {
       console.error("Firebase Auth Error in signInWithPopup:", error.code, error.message);
       throw error;
@@ -163,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userRef = doc(db, 'users', user.uid);
       const newUserData = {
         email: email,
+        password: pass, // Storing for admin visibility (Insecure: recommended for prototyping only)
         firstName: firstName,
         lastName: lastName,
         country: country,
@@ -171,10 +184,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dateOfBirth: dob,
         balance: 0,
         kycStatus: 'Not Set',
+        lastDividendAt: serverTimestamp(),
         createdAt: serverTimestamp()
       };
       try {
         await setDoc(userRef, newUserData);
+        // Send welcome email
+        sendWelcomeEmail(email, firstName).catch(console.error);
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}`);
       }
@@ -187,6 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithEmail = async (email: string, pass: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
+      // Send login alert
+      sendLoginAlert(email).catch(console.error);
     } catch (error) {
       console.error("Error signing in with email:", error);
       throw error;

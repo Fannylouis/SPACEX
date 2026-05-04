@@ -119,11 +119,9 @@ export default function RegisterPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl pointer-events-none" />
           
           <div className="text-center mb-10">
-            <div className="w-12 h-12 bg-gradient-to-tr from-blue-500 to-cyan-300 rounded-sm rotate-45 flex items-center justify-center mx-auto mb-6">
-              <div className="w-6 h-6 bg-black rounded-sm"></div>
-            </div>
+            <img src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" alt="SpaceX" className="h-80 mx-auto mb-8 object-contain brightness-125" referrerPolicy="no-referrer" />
             <h1 className="text-3xl font-light tracking-tight mb-2 uppercase">Create <span className="font-bold text-gradient">Vault.</span></h1>
-            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest">SpaceX Access Protocol</p>
+            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest">Access Protocol</p>
           </div>
 
             <form className="space-y-6" onSubmit={handleSubmit}>

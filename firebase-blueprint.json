@@ -24,7 +24,7 @@
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["Deposit", "Withdraw"] },
+        "type": { "type": "string", "enum": ["Deposit", "Withdrawal", "Investment", "Dividend", "Service Charge"] },
         "amount": { "type": "number" },
         "method": { "type": "string" },
         "status": { "type": "string" },

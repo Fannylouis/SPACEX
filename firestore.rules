@@ -28,7 +28,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'mgbemere3@gmail.com'
+      );
     }
 
     // Entity Validations
@@ -44,15 +47,18 @@ service cloud.firestore {
              (!data.keys().hasAll(['phoneNumber']) || (data.phoneNumber is string && data.phoneNumber.size() <= 50)) &&
              (!data.keys().hasAll(['gender']) || (data.gender is string && data.gender.size() <= 50)) &&
              (!data.keys().hasAll(['dateOfBirth']) || (data.dateOfBirth is string && data.dateOfBirth.size() <= 20)) &&
-             (!data.keys().hasAll(['identityInfo']) || (data.identityInfo is map));
+             (!data.keys().hasAll(['identityInfo']) || (data.identityInfo is map)) &&
+             (!data.keys().hasAll(['totalProfit']) || data.totalProfit is number) &&
+             (!data.keys().hasAll(['netProfit']) || data.netProfit is number) &&
+             (!data.keys().hasAll(['netPortfolioValue']) || data.netPortfolioValue is number);
     }
 
     function isValidTransaction(data) {
       return data.keys().hasAll(['userId', 'type', 'amount', 'status', 'date']) &&
-             data.userId == request.auth.uid &&
+             data.userId is string &&
              data.type is string &&
              data.amount is number &&
-             data.status is string &&
+             data.status in ['Pending', 'Completed', 'Rejected'] &&
              data.date is timestamp &&
              (!data.keys().hasAll(['method']) || (data.method is string)) &&
              (!data.keys().hasAll(['tier']) || (data.tier is string && data.tier.size() <= 100)) &&
@@ -63,7 +69,7 @@ service cloud.firestore {
 
     function isValidOrder(data) {
       return data.keys().hasAll(['userId', 'name', 'price', 'status', 'orderDate', 'image', 'stats']) &&
-             data.userId == request.auth.uid &&
+             data.userId is string &&
              data.name is string && data.name.size() <= 100 &&
              data.price is number && 
              data.status is string && data.status.size() <= 50 &&
@@ -78,27 +84,32 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow list: if isAdmin();
+      allow delete: if isAdmin();
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
       allow update: if ((isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'firstName', 'lastName', 'country', 'phoneNumber', 'gender', 'dateOfBirth'])) || isAdmin()) && 
                     isValidId(userId) && isValidUser(incoming()) && 
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().email == existing().email;
+                    (isAdmin() || (incoming().createdAt == existing().createdAt && incoming().email == existing().email));
     }
 
     match /transactions/{transactionId} {
       allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() && isValidId(transactionId);
-      allow create: if isSignedIn() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().date == request.time;
+      allow delete: if isAdmin();
+      allow create: if isSignedIn() && (isOwner(incoming().userId) || isAdmin()) && isValidId(transactionId) && isValidTransaction(incoming()) && (incoming().date == request.time || isAdmin());
+      allow update: if isAdmin() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().userId == existing().userId;
     }
 
     match /orders/{orderId} {
       allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() && isValidId(orderId);
+      allow delete: if isAdmin();
       allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) && incoming().orderDate == request.time;
     }
 
     match /admins/{adminId} {
       allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin() && isValidId(adminId);
     }
   }
 }

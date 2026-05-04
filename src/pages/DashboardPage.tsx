@@ -63,7 +63,8 @@ import {
   doc,
   updateDoc,
   increment,
-  runTransaction
+  runTransaction,
+  Timestamp
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 
@@ -160,6 +161,99 @@ export default function DashboardPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [passwordResetSent, setPasswordResetSent] = useState(false);
   const [isToggling2FA, setIsToggling2FA] = useState(false);
+  const [dividendApplied, setDividendApplied] = useState(false);
+  const [showDividendToast, setShowDividendToast] = useState(false);
+  const [dividendAmount, setDividendAmount] = useState(0);
+
+  // Weekly Dividend Check
+  useEffect(() => {
+    if (!userData || !userData.uid || authLoading) return;
+
+    // Initialize lastDividendAt if missing
+    if (!userData.lastDividendAt && !dividendApplied) {
+      setDividendApplied(true);
+      updateUserData({ lastDividendAt: serverTimestamp() }).catch(console.error);
+      return;
+    }
+
+    if (userData.lastDividendAt && !dividendApplied) {
+      const now = new Date();
+      let lastDividend;
+      
+      // Handle both Firestore Timestamp and potential Date object
+      if (typeof userData.lastDividendAt.toDate === 'function') {
+        lastDividend = userData.lastDividendAt.toDate();
+      } else {
+        lastDividend = new Date(userData.lastDividendAt);
+      }
+      
+      const diffInMs = now.getTime() - lastDividend.getTime();
+      const msInWeek = 7 * 24 * 60 * 60 * 1000;
+      const elapsedWeeks = Math.floor(diffInMs / msInWeek);
+      
+      if (elapsedWeeks >= 1) {
+        setDividendApplied(true); // Prevent multi-triggers in same session
+        const weeklyGross = 3500;
+        const weeklyFee = 75;
+        const dividendAmount = elapsedWeeks * weeklyGross;
+        const nextDividendAt = new Date(lastDividend.getTime() + (elapsedWeeks * msInWeek));
+        
+        const applyDividend = async () => {
+          try {
+            const netAmount = dividendAmount - (elapsedWeeks * weeklyFee);
+            
+            // Apply balance update
+            const updates: any = {
+              balance: (userData.balance || 0) + netAmount,
+              lastDividendAt: Timestamp.fromDate(nextDividendAt)
+            };
+
+            if (userData.totalProfit !== undefined) {
+              updates.totalProfit = (userData.totalProfit || 0) + (elapsedWeeks * 3500); // Using the $3500 from the prompt logic
+            }
+
+            await updateUserData(updates);
+
+            // Create Transaction Records
+            const transactionsRef = collection(db, "transactions");
+            
+            // 1. Record the Dividend(s)
+            await addDoc(transactionsRef, {
+              userId: userData.uid,
+              type: 'Dividend',
+              amount: dividendAmount,
+              asset: 'Weekly Yield',
+              ticker: 'DIV',
+              status: 'Completed',
+              date: serverTimestamp(),
+              method: 'Automated Credit'
+            });
+
+            // 2. Record the Service Charge(s)
+            await addDoc(transactionsRef, {
+              userId: userData.uid,
+              type: 'Service Charge',
+              amount: elapsedWeeks * weeklyFee,
+              asset: 'Maintenance',
+              ticker: 'FEE',
+              status: 'Completed',
+              date: serverTimestamp(),
+              method: 'Automated Debit'
+            });
+
+            setDividendAmount(dividendAmount);
+            setShowDividendToast(true);
+            setTimeout(() => setShowDividendToast(false), 8000);
+            console.log(`[System] Applied weekly dividend bundle: +$${dividendAmount} credit, -$${elapsedWeeks * 75} service charge.`);
+          } catch (err) {
+            console.error("Failed to apply dividend bundle:", err);
+            setDividendApplied(false);
+          }
+        };
+        applyDividend();
+      }
+    }
+  }, [userData, userData?.lastDividendAt, dividendApplied]);
 
   useEffect(() => {
     if (userData) {
@@ -167,6 +261,15 @@ export default function DashboardPage() {
       setEditLastName(userData.lastName || '');
     }
   }, [userData]);
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (e) {
+      console.error("Sign out error:", e);
+    }
+  };
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
@@ -435,7 +538,7 @@ export default function DashboardPage() {
           ticker: selectedAssetForInvest.ticker,
           amount: amount,
           method: 'Primary Market',
-          status: 'Completed',
+          status: 'Pending',
           date: serverTimestamp()
         });
       }); // Default attempts for stability now that connection is stabilized
@@ -463,15 +566,15 @@ export default function DashboardPage() {
 
   // Derived Stats
   const totalDeposited = transactions
-    .filter(tx => tx.type === 'Deposit')
+    .filter(tx => tx.type === 'Deposit' && tx.status === 'Completed')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const totalWithdrawn = transactions
-    .filter(tx => tx.type === 'Withdraw')
+    .filter(tx => tx.type === 'Withdrawal' && tx.status === 'Completed')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const totalInvested = transactions
-    .filter(tx => tx.type === 'Investment')
+    .filter(tx => tx.type === 'Investment' && tx.status === 'Completed')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   // Real-time balance reference (source of truth from DB)
@@ -482,12 +585,11 @@ export default function DashboardPage() {
   const currentAssetYield = assetYields[calcAsset] || 0.124;
   
   // Profit = Invested Principal * Yield
-  const totalProfit = totalInvested > 0 
-    ? (totalInvested * currentAssetYield) 
-    : 0;
+  const totalProfitStored = userData?.totalProfit || 0;
 
-  // Net Portfolio Value follows the Formula: Invested Principal + Unrealized Gains
-  const netPortfolioValue = totalInvested + totalProfit;
+  const totalProfit = totalProfitStored || (totalInvested > 0 
+    ? (totalInvested * currentAssetYield) 
+    : 0);
 
   const cryptoAssets = [
     { id: 'trx', name: 'Tron', ticker: 'TRX', image: 'https://cryptologos.cc/logos/tron-trx-logo.png', address: 'THihpgigHGEC8NjZAqN8R7wf4CWnwZomvT' },
@@ -524,15 +626,18 @@ export default function DashboardPage() {
         amount: amount,
         method: method,
         tier: depositTier,
-        status: 'Completed',
+        status: type === 'Deposit' ? 'Pending' : 'Completed',
         date: serverTimestamp()
       });
 
-      // Update user balance
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        balance: increment(type === 'Deposit' ? amount : -amount)
-      });
+      // Update user balance ONLY for non-deposits (Investments/Withdrawals handle their own or follow different flow)
+      // Actually, currently withdrawals are also handled here? Let's check where recordTransaction is used.
+      if (type !== 'Deposit') {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          balance: increment(-amount)
+        });
+      }
     } catch (error: any) {
       if (error.code === 'permission-denied') {
         handleFirestoreError(error, OperationType.WRITE, 'transactions/users');
@@ -995,7 +1100,7 @@ export default function DashboardPage() {
                       onClick={async () => {
                         setIsVerifying(true);
                         if (withdrawalInput === withdrawalCode) {
-                          await recordTransaction('Withdraw', parseFloat(withdrawAmount), withdrawMethod);
+                          await recordTransaction('Withdrawal', parseFloat(withdrawAmount), withdrawMethod);
                           setWithdrawStep(4);
                         } else {
                           setCodeError(true);
@@ -1199,13 +1304,6 @@ export default function DashboardPage() {
                   <span className="text-xl font-mono text-emerald-400 font-bold tracking-tighter">
                     +{formatPrice(totalProfit)}
                   </span>
-                </div>
-                <div className="px-6 py-4 card-panel bg-brand-primary/5 border-brand-primary/20 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.1)] group cursor-pointer" onClick={() => setActiveTab('my-projects')}>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-[8px] font-mono text-brand-primary uppercase block font-bold">Net Portfolio Value</span>
-                    <ArrowRight className="h-3 w-3 text-brand-primary opacity-0 group-hover:opacity-100 transition-all" />
-                  </div>
-                  <span className="text-2xl font-mono text-white">{formatPrice(netPortfolioValue)}</span>
                 </div>
               </div>
             </div>
@@ -1771,9 +1869,10 @@ export default function DashboardPage() {
                         <td className="px-8 py-6 text-xs text-slate-500 tracking-tighter uppercase">{tx.id}</td>
                         <td className="px-8 py-6">
                           <span className={`px-2 py-1 bg-white/5 border border-white/10 rounded text-[9px] uppercase tracking-widest ${
-                            tx.type === 'Deposit' ? 'text-emerald-500' : 
+                            tx.type === 'Deposit' || tx.type === 'Dividend' ? 'text-emerald-500' : 
                             tx.type === 'Investment' ? 'text-blue-400' :
-                            'text-red-500'
+                            tx.type === 'Withdrawal' || tx.type === 'Service Charge' ? 'text-red-500' :
+                            'text-slate-400'
                           }`}>
                             {tx.type} {tx.ticker ? `(${tx.ticker})` : ''}
                           </span>
@@ -2045,9 +2144,12 @@ export default function DashboardPage() {
                 
                 <div className="flex justify-between items-start z-10">
                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-tr from-brand-primary to-cyan-400 rounded-lg rotate-45 flex items-center justify-center">
-                         <div className="w-5 h-5 bg-black rounded-sm" />
-                      </div>
+                      <img 
+                        src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" 
+                        alt="Logo" 
+                        className="h-10 w-auto object-contain brightness-110" 
+                        referrerPolicy="no-referrer" 
+                      />
                       <div>
                          <h4 className="text-sm font-bold tracking-tight text-white uppercase">SpaceX</h4>
                          <p className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.3em]">Asset Management</p>
@@ -2239,7 +2341,7 @@ export default function DashboardPage() {
                   </div>
                </div>
                
-               <button onClick={logout} className="w-full py-5 border border-red-500/20 bg-red-500/5 text-red-500 font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-red-500 hover:text-white transition-all">
+               <button onClick={handleSignOut} className="w-full py-5 border border-red-500/20 bg-red-500/5 text-red-500 font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-red-500 hover:text-white transition-all">
                   Terminate Session
                </button>
             </div>
@@ -2271,6 +2373,34 @@ export default function DashboardPage() {
 
   return (
     <div className="pt-24 min-h-screen flex bg-tech-grid relative overflow-x-hidden">
+      {/* Dividend Notification */}
+      <AnimatePresence>
+        {showDividendToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm"
+          >
+            <div className="bg-brand-primary/10 border border-brand-primary/30 backdrop-blur-xl p-4 rounded-xl flex items-center gap-4 shadow-2xl shadow-brand-primary/10">
+              <div className="h-10 w-10 bg-brand-primary rounded-full flex items-center justify-center shrink-0 animate-pulse">
+                <BadgeDollarSign className="h-6 w-6 text-black" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-[10px] font-mono text-brand-primary uppercase tracking-[0.2em] font-bold">Yield Synchronized</h4>
+                <p className="text-xs text-white mt-0.5">Weekly dividend of <span className="font-bold">${dividendAmount.toLocaleString()}</span> has been added to your vault.</p>
+              </div>
+              <button 
+                onClick={() => setShowDividendToast(false)}
+                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -2357,7 +2487,7 @@ export default function DashboardPage() {
 
         <div className="p-6 border-t border-white/5 shrink-0">
           <button 
-            onClick={logout}
+            onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-mono text-red-500 hover:bg-red-500/5 transition-all uppercase tracking-widest"
           >
             <LogOut className="h-4 w-4" />
