@@ -40,7 +40,10 @@ service cloud.firestore {
              data.createdAt is timestamp &&
              (!data.keys().hasAll(['firstName']) || (data.firstName is string && data.firstName.size() <= 100)) &&
              (!data.keys().hasAll(['lastName']) || (data.lastName is string && data.lastName.size() <= 100)) &&
-             (!data.keys().hasAll(['investmentTier']) || (data.investmentTier is string && data.investmentTier.size() <= 100)) &&
+             (!data.keys().hasAll(['country']) || (data.country is string && data.country.size() <= 100)) &&
+             (!data.keys().hasAll(['phoneNumber']) || (data.phoneNumber is string && data.phoneNumber.size() <= 50)) &&
+             (!data.keys().hasAll(['gender']) || (data.gender is string && data.gender.size() <= 50)) &&
+             (!data.keys().hasAll(['dateOfBirth']) || (data.dateOfBirth is string && data.dateOfBirth.size() <= 20)) &&
              (!data.keys().hasAll(['identityInfo']) || (data.identityInfo is map));
     }
 
@@ -62,7 +65,7 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'name', 'price', 'status', 'orderDate', 'image', 'stats']) &&
              data.userId == request.auth.uid &&
              data.name is string && data.name.size() <= 100 &&
-             data.price is string && data.price.size() <= 50 &&
+             data.price is number && 
              data.status is string && data.status.size() <= 50 &&
              data.orderDate is timestamp &&
              data.image is string &&
@@ -76,7 +79,7 @@ service cloud.firestore {
       allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
-      allow update: if ((isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'investmentTier', 'firstName', 'lastName'])) || isAdmin()) && 
+      allow update: if ((isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'firstName', 'lastName', 'country', 'phoneNumber', 'gender', 'dateOfBirth'])) || isAdmin()) && 
                     isValidId(userId) && isValidUser(incoming()) && 
                     incoming().createdAt == existing().createdAt &&
                     incoming().email == existing().email;

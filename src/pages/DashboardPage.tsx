@@ -359,8 +359,10 @@ export default function DashboardPage() {
   const [depositTier, setDepositTier] = useState('Not Set');
 
   useEffect(() => {
-    if (userData?.investmentTier) {
-      setDepositTier(userData.investmentTier);
+    if (userData?.kycStatus === 'Verified') {
+      setDepositTier('Unlimited');
+    } else {
+      setDepositTier('Basic');
     }
   }, [userData]);
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -510,11 +512,10 @@ export default function DashboardPage() {
         date: serverTimestamp()
       });
 
-      // Update user balance and tier
+      // Update user balance
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
-        balance: increment(type === 'Deposit' ? amount : -amount),
-        investmentTier: depositTier
+        balance: increment(type === 'Deposit' ? amount : -amount)
       });
     } catch (error: any) {
       if (error.code === 'permission-denied') {
@@ -2057,7 +2058,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right font-mono">
                          <p className="text-[7px] text-slate-600 uppercase tracking-widest mb-1">Tier Status</p>
-                         <p className="text-[10px] text-brand-primary font-bold tracking-widest uppercase">{userData?.investmentTier || 'Standard'}</p>
+                         <p className="text-[10px] text-brand-primary font-bold tracking-widest uppercase">{userData?.kycStatus || 'Not Verified'}</p>
                       </div>
                    </div>
                 </div>

@@ -91,7 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: authUser.email,
               firstName: firstName,
               lastName: lastName,
-              investmentTier: 'Not Set',
+              country: 'Not Set',
+              phoneNumber: 'Not Set',
+              gender: 'Not Set',
+              dateOfBirth: 'Not Set',
               balance: 0,
               kycStatus: 'Not Set',
               createdAt: serverTimestamp()

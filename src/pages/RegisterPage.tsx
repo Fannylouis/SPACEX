@@ -84,13 +84,15 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
     try {
       await signIn();
-      // Auth changes will trigger navigation - check for email in auth listener or here
-      // Google sign-in doesn't have email in context yet usually, so we'll let AuthProvider handle it if needed
-      // or just send login alert if user object is available
-    } catch (err) {
+      // Auth changes will trigger navigation automatically via user useEffect
+    } catch (err: any) {
       console.error("Google login error:", err);
+      setError('Google synchronization failed. Please ensure popups are permitted.');
+      setLoading(false);
     }
   };
 

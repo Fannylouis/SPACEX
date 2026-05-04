@@ -10,7 +10,8 @@ interface UserRecord {
   email: string;
   firstName?: string;
   lastName?: string;
-  investmentTier?: string;
+  country?: string;
+  phoneNumber?: string;
   balance: number;
   kycStatus: string;
   createdAt: any;
@@ -136,7 +137,7 @@ export default function AdminPage() {
               <thead>
                 <tr className="border-b border-white/5">
                   <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Identity</th>
-                  <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Investment Tier</th>
+                  <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Location</th>
                   <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Balance</th>
                   <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest text-center">KYC Status</th>
                   <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -157,7 +158,7 @@ export default function AdminPage() {
                       </div>
                     </td>
                     <td className="p-6">
-                      <span className="text-xs font-mono text-slate-300 uppercase">{u.investmentTier || 'Not Set'}</span>
+                      <span className="text-xs font-mono text-slate-300 uppercase">{u.country || 'Unknown'}</span>
                     </td>
                     <td className="p-6">
                       <span className="text-xs font-mono text-brand-primary font-bold">${u.balance.toLocaleString()}</span>
@@ -253,8 +254,8 @@ export default function AdminPage() {
                     <p className="text-sm font-mono text-white uppercase">{selectedUser.kycStatus}</p>
                   </div>
                   <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                    <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Investment Tier</p>
-                    <p className="text-sm font-mono text-white uppercase">{selectedUser.investmentTier || 'Not Set'}</p>
+                    <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Phone Protocol</p>
+                    <p className="text-sm font-mono text-white uppercase">{selectedUser.phoneNumber || 'Not Set'}</p>
                   </div>
                   <div className="p-4 bg-white/5 rounded-xl border border-white/5 col-span-2">
                     <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Portfolio Balance</p>

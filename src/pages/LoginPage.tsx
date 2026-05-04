@@ -47,7 +47,15 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    await signIn();
+    setError(null);
+    setLoading(true);
+    try {
+      await signIn();
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      setError('Google synchronization failed. Please ensure popups are permitted.');
+      setLoading(false);
+    }
   };
 
   return (
