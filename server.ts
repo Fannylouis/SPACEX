@@ -3,6 +3,10 @@ import { createServer as createViteServer } from "vite";
 import { Resend } from "resend";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+import cors from "cors";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,14 +15,15 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors());
   app.use(express.json());
 
-  // Initialize Resend lazily to handle missing key gracefully
+  // Initialize Resend lazily
   let resend: Resend | null = null;
   const getResend = () => {
     const key = process.env.RESEND_API_KEY;
     if (!key) {
-      console.warn("RESEND_API_KEY is not set. Email functionality will be simulated.");
+      console.warn("RESEND_API_KEY is missing. Email dispatch is in simulation mode.");
       return null;
     }
     if (!resend) resend = new Resend(key);
@@ -30,28 +35,35 @@ async function startServer() {
     const { to, subject, html } = req.body;
     const resendClient = getResend();
 
-    console.log(`[Email] Sending to ${to}: ${subject}`);
+    console.log(`[Server] Attempting to send email to: ${to}`);
 
     if (resendClient) {
       try {
         const { data, error } = await resendClient.emails.send({
-          from: "SpaceX Verification <noreply@resend.dev>",
-          to: [to],
+          from: "onboarding@resend.dev",
+          to: to,
           subject,
           html,
         });
 
         if (error) {
-          return res.status(400).json({ error });
+          console.error("[Resend Error]", error);
+          return res.status(400).json({ success: false, error });
         }
+        
+        console.log("[Resend Success]", data);
         return res.json({ success: true, data });
-      } catch (err) {
-        return res.status(500).json({ error: "Failed to send email" });
+      } catch (err: any) {
+        console.error("[Server Error]", err);
+        return res.status(500).json({ success: false, error: err.message });
       }
     } else {
-      // Simulation mode
-      console.log("SIMULATION: Email sent to", to);
-      return res.json({ success: true, simulated: true });
+      console.log(`[SIMULATION] Email to ${to} ("${subject}") simulated successfully.`);
+      return res.json({ 
+        success: true, 
+        simulated: true,
+        message: "Email simulated. To send real emails, please provide a RESEND_API_KEY in the settings." 
+      });
     }
   });
 

@@ -39,6 +39,13 @@
         "orderDate": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "name", "price", "status", "orderDate"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrative user flag document",
+      "type": "object",
+      "properties": {},
+      "required": []
     }
   },
   "firestore": {
@@ -53,6 +60,10 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Global vehicle orders (filtered by userId in rules)"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Presence of a document here grants administrative privileges to the user with the matching UID"
     }
   }
 }

@@ -15,16 +15,18 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 
 interface UserData {
   uid: string;
   email: string | null;
   firstName: string | null;
+  lastName: string | null;
   investmentTier: string | null;
   balance: number;
   kycStatus: string;
   createdAt: any;
+  is2FAEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -33,8 +35,10 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, firstName: string, investmentTier: string) => Promise<void>;
+  signUp: (email: string, pass: string, firstName: string, lastName: string, investmentTier: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserData: (data: Partial<UserData>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,39 +49,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        // Check if user document exists, if not create it
-        const userRef = doc(db, 'users', user.uid);
+    let unsubUser: (() => void) | null = null;
+    
+    // Safety timeout to ensure loading doesn't hang forever
+    const loadingTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      // Cleanup previous user listener if it exists
+      if (unsubUser) {
+        unsubUser();
+        unsubUser = null;
+      }
+
+      if (authUser) {
+        setUser(authUser);
+        const userRef = doc(db, 'users', authUser.uid);
         
         try {
           const userSnap = await getDoc(userRef);
 
           if (!userSnap.exists()) {
-            const names = user.displayName?.split(' ') || [];
-            const firstName = names[0] || user.email?.split('@')[0] || 'Investor';
+            const names = authUser.displayName?.split(' ') || [];
+            const firstName = names[0] || authUser.email?.split('@')[0] || 'Investor';
+            const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
 
             const newUserData = {
-              email: user.email,
+              email: authUser.email,
               firstName: firstName,
+              lastName: lastName,
               investmentTier: 'Not Set',
               balance: 0,
               kycStatus: 'Not Set',
               createdAt: serverTimestamp()
             };
-            await setDoc(userRef, newUserData);
+            try {
+               await setDoc(userRef, newUserData);
+            } catch (error) {
+               handleFirestoreError(error, OperationType.CREATE, `users/${authUser.uid}`);
+            }
           }
 
           // Listen for user data changes
-          const unsubUser = onSnapshot(userRef, (doc) => {
+          unsubUser = onSnapshot(userRef, (doc) => {
             if (doc.exists()) {
               setUserData({ uid: doc.id, ...doc.data() } as UserData);
-              setLoading(false);
             }
+            // Always set loading false after first snapshot result
+            setLoading(false);
+          }, (error) => {
+            setLoading(false);
+            handleFirestoreError(error, OperationType.GET, `users/${authUser.uid}`);
           });
-
-          return () => unsubUser();
         } catch (error) {
           console.error("Error fetching user data:", error);
           setLoading(false);
@@ -89,7 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(loadingTimeout);
+      if (unsubUser) unsubUser();
+    };
   }, []);
 
   const signIn = async () => {
@@ -102,20 +130,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, pass: string, firstName: string, investmentTier: string) => {
+  const signUp = async (email: string, pass: string, firstName: string, lastName: string, investmentTier: string) => {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-      // Explicitly create user doc with firstName and investmentTier
+      // Explicitly create user doc with firstName, lastName and investmentTier
       const userRef = doc(db, 'users', user.uid);
       const newUserData = {
         email: email,
         firstName: firstName,
+        lastName: lastName,
         investmentTier: investmentTier,
         balance: 0,
         kycStatus: 'Not Set',
         createdAt: serverTimestamp()
       };
-      await setDoc(userRef, newUserData);
+      try {
+        await setDoc(userRef, newUserData);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}`);
+      }
     } catch (error) {
       console.error("Error signing up:", error);
       throw error;
@@ -139,8 +172,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserData = async (data: Partial<UserData>) => {
+    if (!user) return;
+    try {
+      const { updateDoc } = await import('firebase/firestore');
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userData, loading, signIn, signInWithEmail, signUp, logout }}>
+    <AuthContext.Provider value={{ user, userData, loading, signIn, signInWithEmail, signUp, logout, updateUserData, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

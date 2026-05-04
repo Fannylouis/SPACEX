@@ -4,10 +4,13 @@ import { Mail, Lock, UserPlus, Eye, EyeOff, ArrowRight, ShieldCheck, Chrome } fr
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+import { sendConfirmationEmail } from '../lib/email';
+
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [investmentTier, setInvestmentTier] = useState('0 - 1000');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -32,33 +35,10 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-      await signUp(email, password, firstName, investmentTier);
+      await signUp(email, password, firstName, lastName, investmentTier);
       
-      // Dispatch Confirmation Email via backend API
-      try {
-        await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: email,
-            subject: 'Account Initialization Success | SpaceX Asset Vault',
-            html: `
-              <div style="font-family: monospace; padding: 40px; background: #000; color: #fff; border: 1px solid #1e3a8a;">
-                <h1 style="color: #3b82f6; font-size: 24px; text-transform: uppercase; letter-spacing: 0.2em;">SpaceX Protocol</h1>
-                <p style="color: #64748b; font-size: 12px; text-transform: uppercase;">Identity: ${firstName}</p>
-                <div style="border-top: 1px solid #1e1e1e; margin: 20px 0; padding-top: 20px;">
-                  <p>Your institutional vault has been successfully initialized.</p>
-                  <p>Investment Tier: <strong>${investmentTier} USD</strong></p>
-                  <p style="color: #64748b; font-size: 10px;">Security Hash: ${Math.random().toString(36).substring(7).toUpperCase()}</p>
-                </div>
-                <p style="font-size: 10px; color: #334155;">This is an automated dispatch. Do not reply.</p>
-              </div>
-            `
-          })
-        });
-      } catch (emailErr) {
-        console.warn("Email dispatch failed, but registration succeeded:", emailErr);
-      }
+      // Dispatch Confirmation Email via utility
+      await sendConfirmationEmail(email, 'signup', { firstName, lastName, investmentTier });
 
       // Auth listener in App will handle navigation
     } catch (err: any) {
@@ -77,7 +57,14 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    await signIn();
+    try {
+      await signIn();
+      // Auth changes will trigger navigation - check for email in auth listener or here
+      // Google sign-in doesn't have email in context yet usually, so we'll let AuthProvider handle it if needed
+      // or just send login alert if user object is available
+    } catch (err) {
+      console.error("Google login error:", err);
+    }
   };
 
   return (
@@ -111,20 +98,39 @@ export default function RegisterPage() {
               </motion.div>
             )}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Legal First Name</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <UserPlus className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">First Name</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <UserPlus className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. John"
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
+                    />
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="E.g. Ifeanyi"
-                    required
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
-                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block ml-1">Last Name</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <UserPlus className="h-4 w-4 text-slate-600 transition-colors group-focus-within:text-brand-primary" />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Doe"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder:text-slate-800 focus:border-brand-primary/50 transition-all outline-none font-mono text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 

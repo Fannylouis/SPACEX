@@ -1,115 +1,300 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { ShoppingBag, Zap, Gauge, Battery, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShoppingBag, Zap, Gauge, Battery, ArrowRight, MapPin, ClipboardList, Wallet, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 
 const cars = [
   {
     name: "Model S Plaid",
     tagline: "Beyond Ludicrous.",
-    specs: { acceleration: "1.99s", range: "396mi", topSpeed: "200mph" },
+    description: "Model S Plaid has the lowest drag coefficient on Earth, featuring a revolutionary tri-motor powertrain with carbon-sleeved rotors. It delivers 1,020 horsepower consistently up to its 200 mph top speed.",
+    specs: { acceleration: "1.99s", range: "359mi", topSpeed: "200mph", peakPower: "1,020 hp" },
     price: "From $89,990",
-    image: "https://images.unsplash.com/photo-1620803134941-9885174872c6?auto=format&fit=crop&q=80&w=800",
-    color: "#3b82f6"
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/MODEL%20S.jpg?w=800&h=450",
+    color: "#ef4444"
   },
   {
     name: "Cybertruck",
     tagline: "Built for any planet.",
-    specs: { acceleration: "2.6s", range: "340mi", towing: "11,000 lbs" },
+    description: "Constructed from Ultra-Hard 30X Cold-Rolled stainless-steel, the Cybertruck is an armored personnel carrier for the civilian world. Features 11,000 lbs towing capacity and Extract Mode ground clearance.",
+    specs: { acceleration: "2.6s", range: "340mi", towing: "11,000 lbs", clearance: "17\"" },
     price: "From $79,990",
-    image: "https://images.unsplash.com/photo-1619330030584-3746a5b67271?auto=format&fit=crop&q=80&w=800",
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/awd-cybertruck.jpg?w=800&h=450",
     color: "#94a3b8"
   },
   {
     name: "Model X Plaid",
     tagline: "The SUV of the future.",
-    specs: { acceleration: "2.5s", range: "335mi", doors: "Falcon Wing" },
+    description: "With the most storage space and towing capacity of any electric SUV, and the highest performance, Model X Plaid is the ultimate family vehicle. Features signature Falcon Wing doors for easy access.",
+    specs: { acceleration: "2.5s", range: "326mi", doors: "Falcon Wing", storage: "88 cu ft" },
     price: "From $94,990",
-    image: "https://images.unsplash.com/photo-1526626607727-41777107c71a?auto=format&fit=crop&q=80&w=800",
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PLAID/download.jpg?w=800&h=450",
     color: "#9333ea"
   },
   {
     name: "Model 3 Performance",
     tagline: "Designed for performance.",
-    specs: { acceleration: "2.9s", range: "303mi", topSpeed: "163mph" },
+    description: "The Model 3 Performance features a bespoke performance-tuned chassis, forged wheels, and high-performance brakes. Track Mode V3 allows for customized power split and regenerative braking.",
+    specs: { acceleration: "2.9s", range: "303mi", topSpeed: "163mph", drive: "AWD" },
     price: "From $54,990",
-    image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=800",
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/2025_tesla_model-3_sedan_performance_fq_oem_1_815.avif?w=800&h=450",
     color: "#ef4444"
   },
   {
-    name: "Model Y",
-    tagline: "The world's best-selling car.",
-    specs: { acceleration: "3.5s", range: "320mi", storage: "76 cu ft" },
-    price: "From $44,990",
-    image: "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&q=80&w=800",
-    color: "#1d4ed8"
-  },
-  {
-    name: "Roadster (SpaceX Package)",
+    name: "Roadster",
     tagline: "Apex of speed. Rocket thrusters.",
-    specs: { acceleration: "1.1s*", range: "620mi", topSpeed: "250mph+" },
-    price: "Reservations Open",
-    image: "https://images.unsplash.com/photo-1549413247-4952003d15b0?auto=format&fit=crop&q=80&w=800",
+    description: "The quickest car in the world, with record-setting acceleration, range and performance. Developed with SpaceX Cold Gas Thruster technology to achieve sub-2.0s acceleration and extreme cornering physics.",
+    specs: { acceleration: "1.1s*", range: "620mi", topSpeed: "250mph+", torque: "10,000 Nm" },
+    price: "$250,000 (Reservation)",
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/Tesla-Model-Roadster-2-P4.webp?w=800&h=450",
     color: "#dc2626"
   },
   {
     name: "Tesla Semi",
     tagline: "The future of heavy transport.",
-    specs: { acceleration: "20s", range: "500mi", payload: "82,000 lbs" },
-    price: "Fleet Inquiries",
-    image: "https://images.unsplash.com/photo-1612461879032-4299b007f3cc?auto=format&fit=crop&q=80&w=800",
+    description: "Semi is equipped with a tri-motor system and independent motors on the rear axles for unparalleled traction and efficiency. Fully loaded, it reaches 60 mph in 20 seconds with sub-2 kWh/mi energy consumption.",
+    specs: { acceleration: "5s (Empty)", range: "500mi", payload: "82,000 lbs", motors: "Tri-Motor" },
+    price: "$150,000 (Inquiry)",
+    image: "https://69f5e78ba0be0e562863d717.imgix.net/PHOTO/tesla-semi-standard-range-production-version-4.avif?w=800&h=450",
     color: "#334155"
-  },
-  {
-    name: "Dragon 2 (Crew Transport)",
-    tagline: "LEO access for the elite.",
-    specs: { acceleration: "3.2g", range: "Orbit", payload: "7 Passengers" },
-    price: "Contract Base",
-    image: "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800",
-    color: "#ffffff"
-  },
-  {
-    name: "Starship (Lunar Edition)",
-    tagline: "Mars is next.",
-    specs: { acceleration: "Max-G", range: "Interplanetary", payload: "100 Tons" },
-    price: "Contact SpaceX",
-    image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&q=80&w=800",
-    color: "#cbd5e1"
   }
 ];
 
 export default function ShopPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
+  const [selectedCar, setSelectedCar] = React.useState<any>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
+  const [deliveryInfo, setDeliveryInfo] = React.useState({ address: '', details: '' });
+  const [isProcessing, setIsProcessing] = React.useState(false);
 
-  const handleOrder = async (car: any) => {
+  const getPriceValue = (priceStr: string) => {
+    return parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+  };
+
+  const handleOrder = (car: any) => {
     if (!user) {
       navigate('/invest/login');
       return;
     }
 
+    const price = getPriceValue(car.price);
+    const balance = userData?.balance || 0;
+
+    if (balance < price) {
+      // Not enough money
+      navigate('/invest/dashboard?tab=deposit');
+      return;
+    }
+
+    setSelectedCar(car);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleFinalizeOrder = async () => {
+    if (!user || !selectedCar || !deliveryInfo.address) return;
+
+    setIsProcessing(true);
+    const price = getPriceValue(selectedCar.price);
+
     try {
+      // 1. Create order
       await addDoc(collection(db, 'orders'), {
         userId: user.uid,
-        name: car.name,
-        price: car.price,
-        image: car.image,
-        stats: car.specs,
+        name: selectedCar.name,
+        price: selectedCar.price,
+        image: selectedCar.image,
+        stats: selectedCar.specs,
         status: 'In Production',
+        deliveryAddress: deliveryInfo.address,
+        additionalNotes: deliveryInfo.details,
         orderDate: serverTimestamp()
       });
+
+      // 2. Deduct balance
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        balance: increment(-price)
+      });
+
+      // 3. Record transaction
+      await addDoc(collection(db, 'transactions'), {
+        userId: user.uid,
+        type: 'Purchase',
+        amount: price,
+        method: 'Wallet Balance',
+        status: 'Completed',
+        reference: `FLT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        date: serverTimestamp()
+      });
+
+      setIsCheckoutOpen(false);
       navigate('/invest/dashboard?tab=orders');
     } catch (error) {
-      console.error("Error creating order:", error);
-      alert("Failed to create order. Please try again.");
+      console.error("Error finalizing purchase:", error);
+      handleFirestoreError(error, OperationType.WRITE, 'orders/transactions');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
     <div className="pt-24 min-h-screen">
+      <AnimatePresence>
+        {isCheckoutOpen && selectedCar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isProcessing && setIsCheckoutOpen(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row"
+            >
+              {/* Fleet Intel Sidebar */}
+              <div className="md:w-64 bg-black/40 border-r border-white/5 p-8 flex flex-col pt-12">
+                <div className="mb-10">
+                  <div className="text-[8px] font-mono text-brand-primary uppercase tracking-[0.3em] font-bold mb-3 flex items-center gap-2">
+                    <Zap className="h-2 w-2" /> Asset Specifications
+                  </div>
+                  <h3 className="text-2xl font-bold uppercase tracking-tight text-white leading-none">{selectedCar.name}</h3>
+                  <div className="h-1 w-8 bg-brand-primary mt-4" />
+                </div>
+
+                <div className="space-y-8 flex-grow">
+                  {Object.entries(selectedCar.specs).map(([key, value]) => (
+                    <div key={key} className="group">
+                      <div className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1 transition-colors group-hover:text-brand-primary">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </div>
+                      <div className="text-sm font-mono text-white font-bold tracking-tight">
+                        {value as string}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-auto pt-8">
+                   <div className="p-4 bg-brand-primary/5 border border-brand-primary/20 rounded-xl relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-brand-primary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                      <p className="text-[8px] font-mono text-slate-400 leading-relaxed uppercase tracking-tight relative z-10">
+                        // SECURE UPLINK ESTABLISHED. AUTO-PILOT V12 READY FOR MISSION PARAMETERS.
+                      </p>
+                   </div>
+                </div>
+              </div>
+
+              {/* Main Checkout Form */}
+              <div className="flex-grow p-8 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-brand-primary/10 rounded-lg">
+                      <ShoppingBag className="h-5 w-5 text-brand-primary" />
+                    </div>
+                    <h2 className="text-xl font-bold uppercase tracking-widest font-mono">Procurement</h2>
+                  </div>
+                  <button 
+                    disabled={isProcessing}
+                    onClick={() => setIsCheckoutOpen(false)}
+                    className="p-2 hover:bg-white/5 rounded-full transition-colors disabled:opacity-0"
+                  >
+                    <X className="h-5 w-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/5">
+                  <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-relaxed mb-4">
+                    {selectedCar.description}
+                  </p>
+                  <img 
+                    src={selectedCar.image} 
+                    alt={selectedCar.name} 
+                    className="w-full h-32 object-cover rounded-xl grayscale opacity-50 mb-4"
+                  />
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h3 className="text-lg font-bold text-white uppercase tracking-tight">{selectedCar.name}</h3>
+                      <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Unit Price</p>
+                    </div>
+                    <p className="text-2xl font-mono text-brand-primary font-bold">{selectedCar.price}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <MapPin className="h-3 w-3" /> Delivery Destination
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Street Address, City, State, ZIP"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-white font-mono text-xs focus:border-brand-primary/50 transition-all outline-none"
+                      value={deliveryInfo.address}
+                      onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <ClipboardList className="h-3 w-3" /> Configuration Notes
+                    </label>
+                    <textarea 
+                      placeholder="Interior preferences, specialized delivery instructions, etc."
+                      rows={3}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-white font-mono text-xs focus:border-brand-primary/50 transition-all outline-none resize-none"
+                      value={deliveryInfo.details}
+                      onChange={(e) => setDeliveryInfo({...deliveryInfo, details: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-10 p-6 bg-brand-primary/5 border border-brand-primary/20 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Available Resources</p>
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-brand-primary" />
+                      <span className="text-xl font-mono text-white font-bold">${(userData?.balance || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Transaction Total</p>
+                    <p className="text-xl font-mono text-white font-bold">-${getPriceValue(selectedCar.price).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <button 
+                  disabled={!deliveryInfo.address || isProcessing}
+                  onClick={handleFinalizeOrder}
+                  className="w-full mt-8 py-5 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-brand-primary transition-all active:scale-[0.98] disabled:opacity-20 flex items-center justify-center gap-3"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Authorizing Protocol...
+                    </>
+                  ) : (
+                    <>Initialize Secure Procurement</>
+                  )}
+                </button>
+                
+                <p className="text-center mt-6 text-[8px] font-mono text-slate-600 uppercase tracking-[0.2em]">
+                  By authorizing, you agree to the Interplanetary Delivery Protocols.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       <section className="py-16 border-b border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
         <div className="max-w-7xl mx-auto px-12 relative z-10">

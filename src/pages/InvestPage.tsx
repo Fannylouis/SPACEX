@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import InterestForm from '../components/InterestForm';
 import { ShieldCheck, TrendingUp, Lock, Rocket, Target, Globe, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -77,18 +76,14 @@ export default function InvestPage() {
               <h4 className="text-xl font-bold mb-2">Ready to expand your portfolio?</h4>
               <p className="text-slate-400 text-sm">Register your institutional account to access detailed pitch decks and data rooms.</p>
             </div>
-            <a 
-              href="#interest-form"
+            <Link 
+              to="/invest/signup"
               className="px-8 py-4 bg-brand-primary text-black font-bold uppercase tracking-widest text-[10px] rounded-lg hover:bg-white transition-all whitespace-nowrap"
             >
               Open Investor Account
-            </a>
+            </Link>
           </motion.div>
         </div>
-      </section>
-
-      <section id="interest-form">
-        <InterestForm />
       </section>
 
       <section id="opportunities" className="py-32 border-y border-white/5 bg-black">
@@ -110,7 +105,7 @@ export default function InvestPage() {
             <OpportunityCard 
               title="Mars Colony Fund II"
               status="Open"
-              roi="High Growth"
+              roi="15% Est."
               min="50,000 USD"
               icon={Rocket}
               description="Capital allocation for long-range habitation modules and propulsion testing."
@@ -118,7 +113,7 @@ export default function InvestPage() {
             <OpportunityCard 
               title="Lunar Logistics V"
               status="Limited"
-              roi="Fixed Yield"
+              roi="13% Est."
               min="25,000 USD"
               icon={Target}
               description="Surface transport and resource extraction logistics for Artemis-support missions."
@@ -163,8 +158,12 @@ function PromoCard({ title, desc, icon: Icon }: { title: string; desc: string; i
 function OpportunityCard({ title, status, roi, min, icon: Icon, description }: { 
   title: string; status: string; roi: string; min: string; icon: any; description: string 
 }) {
+  const { user } = useAuth();
   return (
-    <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.01] hover:border-brand-primary/30 transition-all flex flex-col h-full group">
+    <Link 
+      to={user ? "/invest/dashboard" : "/invest/login"}
+      className="p-8 rounded-2xl border border-white/5 bg-white/[0.01] hover:border-brand-primary/30 transition-all flex flex-col h-full group cursor-pointer"
+    >
       <div className="flex justify-between items-start mb-6">
         <div className="p-3 bg-brand-primary/10 rounded-xl">
           <Icon className="w-6 h-6 text-brand-primary" />
@@ -190,6 +189,6 @@ function OpportunityCard({ title, status, roi, min, icon: Icon, description }: {
           <span className="text-white">{min}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

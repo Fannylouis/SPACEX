@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, Rocket, Activity, Menu } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
+  const { user } = useAuth();
+  
   return (
     <motion.nav 
       initial={{ y: -100 }}
@@ -22,16 +26,17 @@ export default function Navbar() {
           <NavLink to="/shop" label="Shop" />
           <NavLink to="/projects" label="Projects" />
           <NavLink to="/invest" label="Invest" />
-          <Link to="/invest/signup" className="px-6 py-2.5 border border-brand-primary/50 rounded bg-brand-primary/5 text-brand-primary cursor-pointer hover:bg-brand-primary/10 transition-all font-bold">
-            Account
+          <Link 
+            to={user ? "/invest/dashboard" : "/invest/login"} 
+            className="px-6 py-2.5 border border-brand-primary/50 rounded bg-brand-primary/5 text-brand-primary cursor-pointer hover:bg-brand-primary/10 transition-all font-bold"
+          >
+            {user ? "Dashboard" : "Account"}
           </Link>
         </div>
       </div>
     </motion.nav>
   );
 }
-
-import { Link, useLocation } from 'react-router-dom';
 
 function NavLink({ to, label }: { to: string; label: string }) {
   const location = useLocation();

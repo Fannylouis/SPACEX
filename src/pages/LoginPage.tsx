@@ -4,6 +4,8 @@ import { Mail, Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Chrome } from 'lucide
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+import { sendConfirmationEmail } from '../lib/email';
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -26,6 +28,10 @@ export default function LoginPage() {
 
     try {
       await signInWithEmail(email, password);
+      
+      // Dispatch Secure Login Notification
+      await sendConfirmationEmail(email, 'login');
+
       // Auth listener in App will handle navigation
     } catch (err: any) {
       console.error("Login error:", err);

@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ShieldCheck, Activity } from 'lucide-react';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 function AppRoutes() {
   const { loading } = useAuth();
@@ -57,6 +58,11 @@ function AppRoutes() {
         </Route>
 
         <Route path="projects" element={<ProjectsPage />} />
+        <Route path="admin" element={
+          <Suspense fallback={<div className="pt-40 text-center font-mono text-[10px] uppercase tracking-widest text-slate-700">Loading Protocol...</div>}>
+            <AdminPage />
+          </Suspense>
+        } />
 
         {/* 404 handled by Navigate or just leaving as is - user mentioned privacy/terms/contact/careers is 404 */}
         <Route path="privacy" element={<Navigate to="/404" replace />} />

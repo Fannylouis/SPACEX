@@ -62,10 +62,11 @@ export default function InterestForm() {
               <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] block">Allocation Range (USD)</label>
               <select className="w-full bg-black border border-white/10 rounded-lg p-4 text-white focus:border-brand-primary/50 transition-colors outline-none appearance-none font-mono text-sm">
                 <option value="">Select Tier</option>
-                <option value="100-500k">$100,000 - $500,000</option>
-                <option value="500k-1m">$500,000 - $1,000,000</option>
-                <option value="1m-5m">$1,000,000 - $5,000,000</option>
-                <option value="5m+">$5,000,000+</option>
+                <option value="0-1k">$1 - $1,000</option>
+                <option value="1k-10k">$1,000 - $10,000</option>
+                <option value="10k-50k">$10,000 - $50,000</option>
+                <option value="50k-100k">$50,000 - $100,000</option>
+                <option value="100k+">$100,000+</option>
               </select>
             </div>
 

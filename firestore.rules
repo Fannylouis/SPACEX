@@ -27,6 +27,10 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Entity Validations
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'balance', 'kycStatus', 'createdAt']) &&
@@ -35,19 +39,23 @@ service cloud.firestore {
              data.kycStatus in ['Pending', 'Verified', 'Rejected', 'Not Set'] &&
              data.createdAt is timestamp &&
              (!data.keys().hasAll(['firstName']) || (data.firstName is string && data.firstName.size() <= 100)) &&
+             (!data.keys().hasAll(['lastName']) || (data.lastName is string && data.lastName.size() <= 100)) &&
              (!data.keys().hasAll(['investmentTier']) || (data.investmentTier is string && data.investmentTier.size() <= 100)) &&
              (!data.keys().hasAll(['identityInfo']) || (data.identityInfo is map));
     }
 
     function isValidTransaction(data) {
-      return data.keys().hasAll(['userId', 'type', 'amount', 'method', 'status', 'date']) &&
+      return data.keys().hasAll(['userId', 'type', 'amount', 'status', 'date']) &&
              data.userId == request.auth.uid &&
              data.type is string &&
              data.amount is number &&
-             data.method is string &&
              data.status is string &&
              data.date is timestamp &&
-             (!data.keys().hasAll(['tier']) || (data.tier is string && data.tier.size() <= 100));
+             (!data.keys().hasAll(['method']) || (data.method is string)) &&
+             (!data.keys().hasAll(['tier']) || (data.tier is string && data.tier.size() <= 100)) &&
+             (!data.keys().hasAll(['reference']) || (data.reference is string && data.reference.size() <= 60)) &&
+             (!data.keys().hasAll(['asset']) || (data.asset is string)) &&
+             (!data.keys().hasAll(['ticker']) || (data.ticker is string));
     }
 
     function isValidOrder(data) {
@@ -58,29 +66,36 @@ service cloud.firestore {
              data.status is string && data.status.size() <= 50 &&
              data.orderDate is timestamp &&
              data.image is string &&
-             data.stats is map;
+             data.stats is map &&
+             (!data.keys().hasAll(['deliveryAddress']) || (data.deliveryAddress is string && data.deliveryAddress.size() <= 500)) &&
+             (!data.keys().hasAll(['additionalNotes']) || (data.additionalNotes is string && data.additionalNotes.size() <= 1000));
     }
 
     // Collection Matches
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
-      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if ((isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'investmentTier', 'firstName', 'lastName'])) || isAdmin()) && 
+                    isValidId(userId) && isValidUser(incoming()) && 
                     incoming().createdAt == existing().createdAt &&
-                    incoming().email == existing().email &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'kycStatus', 'identityInfo', 'investmentTier']);
+                    incoming().email == existing().email;
     }
 
     match /transactions/{transactionId} {
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidTransaction(incoming()) && incoming().date == request.time;
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() && isValidId(transactionId);
+      allow create: if isSignedIn() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().date == request.time;
     }
 
     match /orders/{orderId} {
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidOrder(incoming()) && incoming().orderDate == request.time;
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() && isValidId(orderId);
+      allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) && incoming().orderDate == request.time;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
     }
   }
 }

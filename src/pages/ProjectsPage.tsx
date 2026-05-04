@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Rocket, Satellite, Factory, Brain, Drill, Network, MapPin, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { useAuth } from '../context/AuthContext';
+
 const projects = [
   {
     id: "spacex-space-city",
@@ -63,6 +65,7 @@ const projects = [
 ];
 
 export default function ProjectsPage() {
+  const { user } = useAuth();
   return (
     <div className="pt-24 min-h-screen">
       <section className="py-20 border-b border-white/5 relative overflow-hidden bg-white/[0.01]">
@@ -107,10 +110,12 @@ export default function ProjectsPage() {
             <p className="text-xs text-slate-400 leading-relaxed mb-10 flex-grow">{project.desc}</p>
             
             <Link 
-              to="/invest/login" 
+              to={user ? "/invest/dashboard" : "/invest/login"} 
               className="flex items-center justify-between pt-6 border-t border-white/5 group/link"
             >
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-hover/link:text-white transition-colors">Access Tranche</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-hover/link:text-white transition-colors">
+                {user ? "View in Dashboard" : "Access Tranche"}
+              </span>
               <ArrowUpRight className="h-4 w-4 text-slate-600 group-hover/link:text-brand-primary transition-all group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
             </Link>
           </motion.div>
