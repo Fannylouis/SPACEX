@@ -1,3 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/send-email"
+  to = "/.netlify/functions/send-email"
+  status = 200
+
 [[redirects]]
   from = "http://space-xai.net/*"
   to = "https://space-xai.net/:splat"
@@ -9,3 +19,8 @@
   to = "https://space-xai.net/:splat"
   status = 301
   force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
