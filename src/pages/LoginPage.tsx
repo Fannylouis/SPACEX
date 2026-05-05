@@ -29,9 +29,7 @@ export default function LoginPage() {
     try {
       await signInWithEmail(email, password);
       
-      // Dispatch Secure Login Notification
-      await sendConfirmationEmail(email, 'login');
-
+      // Duplicate email call removed - AuthContext now triggers login notifications
       // Auth listener in App will handle navigation
     } catch (err: any) {
       console.error("Login error:", err);

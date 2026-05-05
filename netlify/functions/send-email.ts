@@ -31,7 +31,7 @@ export const handler: Handler = async (event, context) => {
         };
       }
 
-      const { data, error } = await resend.emails.send({
+      const { data: targetData, error } = await resend.emails.send({
         from: "SpaceX Vault <onboarding@resend.dev>",
         to: Array.isArray(to) ? to : [to],
         subject: String(subject),
@@ -39,17 +39,17 @@ export const handler: Handler = async (event, context) => {
       });
 
       if (error) {
-        console.error("[Resend Error Detail]", JSON.stringify(error, null, 2));
+        console.error("[Resend Error] API call failed:", JSON.stringify(error, null, 2));
         return {
           statusCode: 400,
           body: JSON.stringify({ success: false, error }),
         };
       }
       
-      console.log("[Resend Success]", data);
+      console.log("[Resend Success] Email dispatched successfully:", targetData);
       return {
         statusCode: 200,
-        body: JSON.stringify({ success: true, data }),
+        body: JSON.stringify({ success: true, data: targetData }),
       };
     } else {
       console.log(`[SIMULATION] Email to ${to} ("${subject}") simulated successfully.`);

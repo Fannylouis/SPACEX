@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { collection, query, getDocs, doc, updateDoc, onSnapshot, where, increment, runTransaction, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, onSnapshot, where, increment, runTransaction, setDoc, deleteDoc, writeBatch, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Shield, ChevronRight, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Calendar, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { Shield, ChevronRight, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Calendar, Edit2, Save, X, Trash2, MessageSquare, Send, CornerDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Timestamp } from 'firebase/firestore';
 
@@ -31,19 +31,26 @@ interface UserRecord {
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'users' | 'deposits' | 'withdrawals' | 'investments'>('users');
+  const [activeView, setActiveView] = useState<'users' | 'deposits' | 'withdrawals' | 'investments' | 'tickets'>('users');
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [deposits, setDeposits] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [adminList, setAdminList] = useState<string[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKyc, setFilterKyc] = useState('All');
+  const [filterTicketStatus, setFilterTicketStatus] = useState('All');
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [newDateValue, setNewDateValue] = useState<string>('');
+  
+  // Ticket Response State
+  const [responseTicketId, setResponseTicketId] = useState<string | null>(null);
+  const [adminResponse, setAdminResponse] = useState('');
+  const [isResponding, setIsResponding] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -109,12 +116,18 @@ export default function AdminPage() {
       setAdminList(snap.docs.map(doc => doc.id));
     });
 
+    const ticketsQuery = query(collection(db, 'support_tickets'), orderBy('createdAt', 'desc'));
+    const unsubTickets = onSnapshot(ticketsQuery, (snap) => {
+      setTickets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubUsers();
       unsubDeposits();
       unsubWithdrawals();
       unsubInvestments();
       unsubAdmins();
+      unsubTickets();
     };
   }, [isAdmin]);
 
@@ -401,6 +414,34 @@ export default function AdminPage() {
     }
   };
 
+  const handleRespondToTicket = async (ticketId: string) => {
+    if (!adminResponse.trim()) return;
+    setIsResponding(true);
+    try {
+      await updateDoc(doc(db, 'support_tickets', ticketId), {
+        response: adminResponse,
+        respondedAt: serverTimestamp(),
+        status: 'Resolved',
+        updatedAt: serverTimestamp()
+      });
+      setResponseTicketId(null);
+      setAdminResponse('');
+    } catch (err) {
+      console.error("Error responding to ticket:", err);
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!confirm("Are you sure you want to delete this ticket?")) return;
+    try {
+      await deleteDoc(doc(db, 'support_tickets', ticketId));
+    } catch (err) {
+      console.error("Error deleting ticket:", err);
+    }
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = (u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           u.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -477,9 +518,28 @@ export default function AdminPage() {
              >
                Investments ({investments.length})
              </button>
+             <button 
+              onClick={() => setActiveView('tickets')}
+              className={`px-6 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${activeView === 'tickets' ? 'bg-brand-primary text-black font-bold' : 'bg-white/5 text-slate-500 hover:text-white'}`}
+             >
+               Tickets ({tickets.length})
+             </button>
           </div>
 
           <div className="flex flex-wrap gap-4 w-full md:w-auto">
+            {activeView === 'tickets' && (
+              <select 
+                value={filterTicketStatus}
+                onChange={(e) => setFilterTicketStatus(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-[10px] font-mono focus:border-brand-primary/50 outline-none uppercase"
+              >
+                <option value="All">All Tickets</option>
+                <option value="Open">Open</option>
+                <option value="Pending">Pending</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+              </select>
+            )}
             <div className="relative flex-grow md:flex-grow-0 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500" />
               <input 
@@ -817,7 +877,7 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeView === 'investments' ? (
           <div className="card-panel overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -930,7 +990,119 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-        )}
+        ) : activeView === 'tickets' ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tickets
+                .filter(t => filterTicketStatus === 'All' || t.status === filterTicketStatus)
+                .filter(t => t.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            t.subject?.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((ticket) => (
+                <div key={ticket.id} className="card-panel p-8 flex flex-col h-full bg-white/[0.01]">
+                  <div className="flex justify-between items-start mb-6">
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-widest border ${
+                      ticket.status === 'Open' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                      ticket.status === 'Resolved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                      'bg-white/5 text-slate-500 border-white/10'
+                    }`}>
+                      {ticket.status}
+                    </span>
+                    <button 
+                      onClick={() => handleDeleteTicket(ticket.id)}
+                      className="text-slate-700 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-1">{ticket.subject}</h4>
+                  <p className="text-[10px] font-mono text-slate-500 mb-6">{ticket.userEmail}</p>
+
+                  <div className="bg-black/40 border border-white/5 p-4 rounded-lg mb-6 flex-grow">
+                    <p className="text-[11px] font-mono text-slate-400 leading-relaxed italic">
+                      "{ticket.message}"
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="flex justify-between items-center text-[9px] font-mono uppercase text-slate-600">
+                      <span>Category: {ticket.category}</span>
+                      <span>{ticket.createdAt?.toDate ? ticket.createdAt.toDate().toLocaleDateString() : 'Recent'}</span>
+                    </div>
+
+                    {ticket.response ? (
+                      <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-3 w-3 text-emerald-500" />
+                          <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Responded</span>
+                        </div>
+                        <p className="text-[10px] font-mono text-slate-300 leading-relaxed line-clamp-3">
+                          {ticket.response}
+                        </p>
+                        <button 
+                          onClick={() => {
+                            setResponseTicketId(ticket.id);
+                            setAdminResponse(ticket.response);
+                          }}
+                          className="mt-3 text-[8px] font-mono text-slate-500 hover:text-white uppercase tracking-widest"
+                        >
+                          Edit Response
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setResponseTicketId(ticket.id)}
+                        className="w-full py-3 bg-white/5 border border-white/10 rounded-lg text-white font-bold uppercase tracking-widest text-[9px] hover:bg-brand-primary hover:text-black transition-all flex items-center justify-center gap-2"
+                      >
+                        <MessageSquare className="h-3 w-3" />
+                        Respond to Protocol
+                      </button>
+                    )}
+                  </div>
+
+                  {responseTicketId === ticket.id && (
+                    <div className="mt-6 pt-6 border-t border-brand-primary/20">
+                       <label className="text-[9px] font-mono text-brand-primary uppercase tracking-[0.2em] block mb-3">Transmission Content</label>
+                       <textarea 
+                        value={adminResponse}
+                        onChange={(e) => setAdminResponse(e.target.value)}
+                        placeholder="Enter response message..."
+                        rows={4}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg p-4 text-[10px] font-mono text-white outline-none focus:border-brand-primary/50 transition-all resize-none mb-4"
+                       />
+                       <div className="flex gap-2">
+                          <button 
+                            disabled={isResponding}
+                            onClick={() => handleRespondToTicket(ticket.id)}
+                            className="flex-grow py-3 bg-brand-primary text-black font-bold uppercase tracking-widest text-[9px] rounded-lg hover:bg-white transition-all flex items-center justify-center gap-2"
+                          >
+                            <Send className="h-3 w-3" />
+                            {isResponding ? 'Transmitting...' : 'Dispatch'}
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setResponseTicketId(null);
+                              setAdminResponse('');
+                            }}
+                            className="px-4 py-3 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-all"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                       </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {tickets.length === 0 && (
+              <div className="py-32 text-center card-panel">
+                <Shield className="h-12 w-12 text-slate-800 mx-auto mb-6" />
+                <p className="text-[10px] font-mono text-slate-600 uppercase tracking-[0.4em]">Zero protocol in-bound inquiries detected.</p>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* User Detail Modal */}

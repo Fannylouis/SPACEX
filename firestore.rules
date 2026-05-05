@@ -80,6 +80,20 @@ service cloud.firestore {
              (!data.keys().hasAll(['additionalNotes']) || (data.additionalNotes is string && data.additionalNotes.size() <= 1000));
     }
 
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'subject', 'message', 'status', 'createdAt']) &&
+             data.userId is string &&
+             data.userEmail is string &&
+             data.subject is string && data.subject.size() <= 200 &&
+             data.message is string && data.message.size() <= 2000 &&
+             data.status in ['Open', 'Pending', 'Resolved', 'Closed'] &&
+             data.createdAt is timestamp &&
+             (!data.keys().hasAll(['category']) || (data.category in ['General', 'Billing', 'Technical', 'Complaint'])) &&
+             (!data.keys().hasAll(['response']) || (data.response is string && data.response.size() <= 2000)) &&
+             (!data.keys().hasAll(['respondedAt']) || (data.respondedAt is timestamp)) &&
+             (!data.keys().hasAll(['updatedAt']) || (data.updatedAt is timestamp));
+    }
+
     // Collection Matches
     match /users/{userId} {
       allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
@@ -104,6 +118,16 @@ service cloud.firestore {
       allow get: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() && isValidId(orderId);
       allow delete: if isAdmin();
       allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) && incoming().orderDate == request.time;
+    }
+
+    match /support_tickets/{ticketId} {
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow get: if (isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin())) && isValidId(ticketId);
+      allow delete: if isAdmin();
+      allow create: if isSignedIn() && (isOwner(incoming().userId) || isAdmin()) && isValidId(ticketId) && isValidSupportTicket(incoming()) && incoming().createdAt == request.time;
+      allow update: if (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['message', 'subject', 'category', 'updatedAt']))) &&
+                    isValidId(ticketId) && isValidSupportTicket(incoming()) && 
+                    (isAdmin() || (incoming().userId == existing().userId && incoming().status == existing().status));
     }
 
     match /admins/{adminId} {

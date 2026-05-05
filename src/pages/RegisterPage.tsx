@@ -64,9 +64,7 @@ export default function RegisterPage() {
     try {
       await signUp(email, password, firstName, lastName, dateOfBirth, country, phone, gender);
       
-      // Dispatch Confirmation Email via utility
-      await sendConfirmationEmail(email, 'signup', { firstName, lastName });
-
+      // Removed duplicate sendConfirmationEmail call as AuthContext now handles it
       // Auth listener in App will handle navigation
     } catch (err: any) {
       console.error("Registration error:", err);

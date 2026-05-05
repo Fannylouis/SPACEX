@@ -16,8 +16,20 @@ export async function sendEmail({ to, subject, html }: EmailParams) {
 
     const data = await response.json();
     if (!data.success) {
-      console.error('Email service failed:', data.error);
+      console.error('Email Dispatch Failure:', data.error);
+      return { 
+        success: false, 
+        error: data.error,
+        message: data.error?.message || 'Unknown protocol error during dispatch.'
+      };
     }
+
+    if (data.simulated) {
+      console.log('Email Transmission Simulated (No API Key):', data.message);
+    } else {
+      console.log('Email Transmission Success:', data.data);
+    }
+
     return data;
   } catch (error) {
     console.error('Error in email service:', error);

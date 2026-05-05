@@ -61,11 +61,11 @@ async function startServer() {
         });
 
         if (error) {
-          console.error("[Resend Error Detail]", JSON.stringify(error, null, 2));
+          console.error("[Resend Error] API call failed:", JSON.stringify(error, null, 2));
           return res.status(400).json({ success: false, error });
         }
         
-        console.log("[Resend Success]", data);
+        console.log("[Resend Success] Email dispatched successfully:", data);
         return res.json({ success: true, data });
       } catch (err: any) {
         console.error("[Server Error]", err);

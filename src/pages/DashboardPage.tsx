@@ -38,7 +38,11 @@ import {
   Calculator,
   BarChart3,
   X,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  Send,
+  HelpCircle,
+  Info
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -80,6 +84,7 @@ const sidebarItems = [
   { id: 'membership', label: 'Membership Card', icon: CreditCard, category: 'Assets' },
   { id: 'kyc', label: 'KYC', icon: UserRoundCheck, category: 'Protocol' },
   { id: 'transactions', label: 'Transactions', icon: ReceiptText, category: 'Protocol' },
+  { id: 'support', label: 'Support & Feedback', icon: MessageSquare, category: 'Protocol' },
   { id: 'settings', label: 'Settings', icon: Settings, category: 'Protocol' },
 ];
 
@@ -163,9 +168,62 @@ export default function DashboardPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [passwordResetSent, setPasswordResetSent] = useState(false);
   const [isToggling2FA, setIsToggling2FA] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{ loading: boolean; success?: boolean; message?: string } | null>(null);
   const [dividendApplied, setDividendApplied] = useState(false);
   const [showDividendToast, setShowDividendToast] = useState(false);
   const [dividendAmount, setDividendAmount] = useState(0);
+
+  // Support Ticket State
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportCategory, setSupportCategory] = useState('General');
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
+  const [userTickets, setUserTickets] = useState<any[]>([]);
+
+  // Effect to fetch user tickets
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'support_tickets'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setUserTickets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.error("Support tickets fetch error:", err);
+    });
+    return unsub;
+  }, [user]);
+
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !supportSubject || !supportMessage) return;
+    
+    setIsSubmittingTicket(true);
+    try {
+      await addDoc(collection(db, 'support_tickets'), {
+        userId: user.uid,
+        userEmail: user.email,
+        subject: supportSubject,
+        message: supportMessage,
+        category: supportCategory,
+        status: 'Open',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      setTicketSuccess(true);
+      setSupportSubject('');
+      setSupportMessage('');
+      setTimeout(() => setTicketSuccess(false), 5000);
+    } catch (err) {
+      console.error("Error submitting ticket:", err);
+      handleFirestoreError(err, OperationType.CREATE, 'support_tickets');
+    } finally {
+      setIsSubmittingTicket(false);
+    }
+  };
 
   // Weekly Dividend Check
   useEffect(() => {
@@ -309,6 +367,32 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Error sending password reset:", error);
     }
+  };
+
+  const handleTestEmail = async () => {
+    if (!user?.email) return;
+    setEmailStatus({ loading: true });
+    try {
+      const response = await sendConfirmationEmail(user.email, 'login', 'DIAGNOSTIC-TEST');
+      if (response.success) {
+        setEmailStatus({ 
+          success: true, 
+          loading: false, 
+          message: response.simulated 
+            ? "SIMULATION MODE: API calls are successful but no email was sent because RESEND_API_KEY is missing." 
+            : "SUCCESS: Email transmission protocol verified. Check your inbox (and spam folder)." 
+        });
+      } else {
+        setEmailStatus({ 
+          success: false, 
+          loading: false, 
+          message: response.message || "FAILURE: Resend API rejected the request. Verify your API key and domain status."
+        });
+      }
+    } catch (err: any) {
+      setEmailStatus({ success: false, loading: false, message: "CRITICAL: Tunnel connection failed." });
+    }
+    setTimeout(() => setEmailStatus(null), 10000);
   };
 
   const handleFocusAsset = (ticker: string) => {
@@ -2200,6 +2284,191 @@ export default function DashboardPage() {
             </div>
           </div>
         );
+      case 'support':
+        return (
+          <div className="py-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+              <div>
+                <h2 className="text-3xl font-light uppercase tracking-tight mb-2">Protocol <span className="font-bold text-gradient">Support.</span></h2>
+                <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
+                  Encryption-grade assistance and technical arbitration.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <div className="card-panel px-6 py-4 border-emerald-500/10 bg-emerald-500/5">
+                  <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Response Time</span>
+                  <span className="text-sm font-mono text-emerald-400 font-bold uppercase tracking-widest">&lt; 24 Hours</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 space-y-8">
+                <form onSubmit={handleSubmitTicket} className="card-panel p-10 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-4">Subject</label>
+                      <input 
+                        type="text"
+                        value={supportSubject}
+                        onChange={(e) => setSupportSubject(e.target.value)}
+                        placeholder="Inquiry Topic"
+                        required
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-xs font-mono text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-4">Category</label>
+                      <select 
+                        value={supportCategory}
+                        onChange={(e) => setSupportCategory(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-xs font-mono text-white focus:outline-none focus:border-brand-primary/50 transition-all appearance-none uppercase"
+                      >
+                        <option value="General">General Inquiry</option>
+                        <option value="Billing">Billing & Liquidity</option>
+                        <option value="Technical">Technical Support</option>
+                        <option value="Complaint">System Complaint</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] block mb-4">Detailed Message</label>
+                    <textarea 
+                      value={supportMessage}
+                      onChange={(e) => setSupportMessage(e.target.value)}
+                      required
+                      rows={6}
+                      placeholder="Describe your inquiry or complaint with terminal-level precision..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-6 text-xs font-mono text-white focus:outline-none focus:border-brand-primary/50 transition-all resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {ticketSuccess && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-4"
+                    >
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <div>
+                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Dispatch Success</p>
+                        <p className="text-[8px] font-mono text-emerald-500/70 uppercase">Ticket #{(Math.random() * 10000).toFixed(0)} submitted to headquarters.</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <button 
+                    type="submit"
+                    disabled={isSubmittingTicket}
+                    className="w-full py-5 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-brand-primary transition-all disabled:opacity-20 flex items-center justify-center gap-3 group"
+                  >
+                    <Send className={`h-4 w-4 transition-transform ${isSubmittingTicket ? '' : 'group-hover:translate-x-1 group-hover:-translate-y-1'}`} />
+                    {isSubmittingTicket ? 'Dispatched In Progress...' : 'Transmit Inquiry'}
+                  </button>
+                </form>
+
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.4em] px-2">Historical Inquiries</h3>
+                  {userTickets.length === 0 ? (
+                    <div className="card-panel p-16 text-center">
+                      <HelpCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
+                      <p className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">No existing support thread detected.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {userTickets.map((ticket) => (
+                        <div key={ticket.id} className="card-panel p-8 bg-white/[0.01] hover:bg-white/[0.02] transition-all">
+                          <div className="flex justify-between items-start mb-6">
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="text-sm font-bold uppercase tracking-widest text-white">{ticket.subject}</h4>
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-widest border ${
+                                  ticket.status === 'Open' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                  ticket.status === 'Resolved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                  'bg-white/5 text-slate-500 border-white/10'
+                                }`}>
+                                  {ticket.status}
+                                </span>
+                              </div>
+                              <p className="text-[8px] font-mono text-slate-600 uppercase">
+                                {ticket.category} • {ticket.createdAt?.toDate ? ticket.createdAt.toDate().toLocaleString() : 'Recent'}
+                              </p>
+                            </div>
+                            <span className="text-[8px] font-mono text-slate-700">TID-{ticket.id.substring(0, 8).toUpperCase()}</span>
+                          </div>
+                          
+                          <p className="text-xs font-mono text-slate-400 leading-relaxed mb-6 bg-black/20 p-4 rounded-lg border border-white/5">
+                            {ticket.message}
+                          </p>
+
+                          {ticket.response && (
+                            <div className="pl-6 border-l-2 border-brand-primary/30 py-2">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="h-4 w-4 bg-brand-primary rounded flex items-center justify-center">
+                                  <Shield className="h-2.5 w-2.5 text-black" />
+                                </div>
+                                <span className="text-[9px] font-bold text-brand-primary uppercase tracking-widest">Official Response</span>
+                                <span className="text-[8px] font-mono text-slate-600 uppercase">
+                                  {ticket.respondedAt?.toDate ? ticket.respondedAt.toDate().toLocaleString() : ''}
+                                </span>
+                              </div>
+                              <p className="text-xs font-mono text-white leading-relaxed">
+                                {ticket.response}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                 <div className="card-panel p-8 space-y-6">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">Support Protocols</h4>
+                    <div className="space-y-4">
+                       <div className="flex gap-4">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                             <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                          </div>
+                          <p className="text-[9px] font-mono text-slate-500 uppercase leading-relaxed">
+                             All inquiries are encrypted using AES-256 standards before ingestion.
+                          </p>
+                       </div>
+                       <div className="flex gap-4">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                             <Activity className="h-4 w-4 text-brand-primary" />
+                          </div>
+                          <p className="text-[9px] font-mono text-slate-500 uppercase leading-relaxed">
+                             Status updates are broadcasted in real-time to your terminal.
+                          </p>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="card-panel p-8">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest mb-4">Service Status</h4>
+                    <div className="space-y-3">
+                       <div className="flex justify-between items-center text-[9px] font-mono uppercase">
+                          <span className="text-slate-600">Core Network</span>
+                          <span className="text-emerald-500">Operational</span>
+                       </div>
+                       <div className="flex justify-between items-center text-[9px] font-mono uppercase">
+                          <span className="text-slate-600">Support API</span>
+                          <span className="text-emerald-500">Operational</span>
+                       </div>
+                       <div className="flex justify-between items-center text-[9px] font-mono uppercase">
+                          <span className="text-slate-600">Avg. Latency</span>
+                          <span className="text-white">12ms</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        );
       case 'settings':
         return (
           <div className="py-8 max-w-xl">
@@ -2343,6 +2612,44 @@ export default function DashboardPage() {
                   </div>
                </div>
                
+               <div className="card-panel p-10">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-6">Communication Diagnostics</h4>
+                  <div className="space-y-6">
+                    <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest leading-relaxed">
+                      Verify your connection to the Resend dispatch protocol. This will attempt to send a secure login alert to your registered email.
+                    </p>
+                    
+                    {emailStatus && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className={`p-4 rounded border text-[9px] font-mono uppercase tracking-widest ${
+                          emailStatus.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'
+                        }`}
+                      >
+                        {emailStatus.loading ? 'Synchronizing with Terminal...' : emailStatus.message}
+                      </motion.div>
+                    )}
+
+                    <button 
+                      onClick={handleTestEmail}
+                      disabled={emailStatus?.loading}
+                      className="w-full py-4 bg-white/5 border border-white/10 rounded-lg text-white font-bold uppercase tracking-widest text-[9px] hover:bg-white/10 transition-all flex items-center justify-center gap-2 group"
+                    >
+                      <Mail className="h-3.5 w-3.5 group-hover:animate-bounce" />
+                      {emailStatus?.loading ? 'Sending diagnostic...' : 'Test Transmission Protocol'}
+                    </button>
+                    
+                    <div className="p-4 bg-black/40 border border-white/5 rounded-lg space-y-2">
+                       <p className="text-[8px] font-mono text-slate-600 uppercase">Resend Status: <span className="text-white">Active</span></p>
+                       <p className="text-[8px] font-mono text-slate-600 uppercase">Provider: <span className="text-white">Resend.com</span></p>
+                       <p className="text-[8px] font-mono text-slate-700 uppercase leading-relaxed italic">
+                         Note: Free tier users can only receive emails on the account associated with their Resend API key unless a custom domain is verified.
+                       </p>
+                    </div>
+                  </div>
+               </div>
+
                <button onClick={handleSignOut} className="w-full py-5 border border-red-500/20 bg-red-500/5 text-red-500 font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-red-500 hover:text-white transition-all">
                   Terminate Session
                </button>
