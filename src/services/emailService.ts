@@ -80,3 +80,30 @@ export const sendLoginAlert = async (email: string) => {
     `
   });
 };
+export const sendTicketResponseEmail = async (email: string, subject: string, responseContent: string) => {
+  return sendEmail({
+    to: email,
+    subject: `Response: ${subject} | SpaceX Support`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 40px; border-radius: 8px; border: 1px solid #1e3a8a;">
+        <h1 style="color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; font-size: 18px;">Support Protocol Response</h1>
+        <p style="font-size: 14px; color: #94a3b8; margin-bottom: 24px;">Regarding your inquiry: <strong>${subject}</strong></p>
+        
+        <div style="background-color: #0a0a0a; border: 1px solid #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 30px;">
+          <p style="font-size: 15px; line-height: 1.7; color: #e2e8f0; white-space: pre-wrap;">${responseContent}</p>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">
+          The status of your ticket has been updated to <strong>RESOLVED</strong>. If you require further assistance, please open a secondary channel via your dashboard.
+        </p>
+
+        <a href="${window.location.origin}/dashboard?tab=support" style="display: inline-block; background-color: #3b82f6; color: #000; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">View Support Dashboard</a>
+        
+        <p style="margin-top: 40px; font-size: 10px; color: #334155; border-top: 1px solid #1e293b; padding-top: 20px; font-family: monospace;">
+          // TRANSACTION_TYPE: SUPPORT_REPLY
+          // SYSTEM: SPACEX_VAULT_V4
+        </p>
+      </div>
+    `
+  });
+};

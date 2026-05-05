@@ -55,7 +55,7 @@ import {
   BarChart,
   Bar
 } from 'recharts';
-import { sendConfirmationEmail } from '../lib/email';
+import { sendLoginAlert } from '../services/emailService';
 import { 
   collection, 
   query, 
@@ -168,7 +168,7 @@ export default function DashboardPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [passwordResetSent, setPasswordResetSent] = useState(false);
   const [isToggling2FA, setIsToggling2FA] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<{ loading: boolean; success?: boolean; message?: string } | null>(null);
+  const [emailStatus, setEmailStatus] = useState<{ loading?: boolean; success?: boolean; message?: string; simulated?: boolean } | null>(null);
   const [dividendApplied, setDividendApplied] = useState(false);
   const [showDividendToast, setShowDividendToast] = useState(false);
   const [dividendAmount, setDividendAmount] = useState(0);
@@ -373,14 +373,15 @@ export default function DashboardPage() {
     if (!user?.email) return;
     setEmailStatus({ loading: true });
     try {
-      const response = await sendConfirmationEmail(user.email, 'login', 'DIAGNOSTIC-TEST');
+      const response = await sendLoginAlert(user.email);
       if (response.success) {
         setEmailStatus({ 
           success: true, 
           loading: false, 
+          simulated: response.simulated,
           message: response.simulated 
-            ? "SIMULATION MODE: API calls are successful but no email was sent because RESEND_API_KEY is missing." 
-            : "SUCCESS: Email transmission protocol verified. Check your inbox (and spam folder)." 
+            ? "SIMULATION MODE: API Key not detected in system environment." 
+            : "LIVE MODE: Secure email transmission protocol verified." 
         });
       } else {
         setEmailStatus({ 
@@ -2623,11 +2624,43 @@ export default function DashboardPage() {
                       <motion.div 
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className={`p-4 rounded border text-[9px] font-mono uppercase tracking-widest ${
-                          emailStatus.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'
+                        className={`p-6 rounded-xl border flex items-center gap-4 ${
+                          emailStatus.loading ? 'bg-white/5 border-white/10' :
+                          !emailStatus.success ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                          emailStatus.simulated ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
+                          'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                         }`}
                       >
-                        {emailStatus.loading ? 'Synchronizing with Terminal...' : emailStatus.message}
+                        {emailStatus.loading ? (
+                          <div className="flex items-center gap-3 w-full">
+                            <div className="h-4 w-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400">Verifying Protocol Link...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                              !emailStatus.success ? 'bg-red-500/20' :
+                              emailStatus.simulated ? 'bg-amber-500/20' : 'bg-emerald-500/20'
+                            }`}>
+                              {!emailStatus.success ? <X className="h-5 w-5" /> : 
+                               emailStatus.simulated ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                            </div>
+                            <div>
+                               <p className="text-[10px] font-bold uppercase tracking-widest mb-1">
+                                 {!emailStatus.success ? 'Protocol Failure' : 
+                                  emailStatus.simulated ? 'Diagnostic: Simulation active' : 'Diagnostic: Live Link Active'}
+                               </p>
+                               <p className="text-[10px] font-mono leading-relaxed opacity-80">
+                                 {emailStatus.message}
+                               </p>
+                               {emailStatus.success && !emailStatus.simulated && (
+                                 <p className="text-[8px] font-mono text-emerald-500/50 uppercase mt-2 pt-2 border-t border-emerald-500/10">
+                                   Note: Deliveries are currently restricted to authorized account emails in sandbox mode.
+                                 </p>
+                               )}
+                            </div>
+                          </>
+                        )}
                       </motion.div>
                     )}
 

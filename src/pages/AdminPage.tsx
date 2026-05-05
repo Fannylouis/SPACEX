@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { Shield, ChevronRight, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Calendar, Edit2, Save, X, Trash2, MessageSquare, Send, CornerDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Timestamp } from 'firebase/firestore';
+import { sendTicketResponseEmail } from '../services/emailService';
 
 interface UserRecord {
   id: string;
@@ -418,12 +419,22 @@ export default function AdminPage() {
     if (!adminResponse.trim()) return;
     setIsResponding(true);
     try {
+      const ticket = tickets.find(t => t.id === ticketId);
+      
       await updateDoc(doc(db, 'support_tickets', ticketId), {
         response: adminResponse,
         respondedAt: serverTimestamp(),
         status: 'Resolved',
         updatedAt: serverTimestamp()
       });
+
+      // Send Response Email
+      if (ticket && ticket.userEmail) {
+        sendTicketResponseEmail(ticket.userEmail, ticket.subject, adminResponse).catch(err => {
+          console.error("Email dispatch failed:", err);
+        });
+      }
+
       setResponseTicketId(null);
       setAdminResponse('');
     } catch (err) {
