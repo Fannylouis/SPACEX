@@ -36,11 +36,11 @@ service cloud.firestore {
 
     // Entity Validations
     function isValidUser(data) {
-      return data.keys().hasAll(['email', 'balance', 'kycStatus', 'createdAt']) &&
+      return data.keys().hasAll(['email', 'balance', 'kycStatus']) &&
              data.email is string &&
              data.balance is number &&
              data.kycStatus in ['Pending', 'Verified', 'Rejected', 'Not Set'] &&
-             data.createdAt is timestamp &&
+             (!data.keys().hasAll(['createdAt']) || data.createdAt is timestamp) &&
              (!data.keys().hasAll(['firstName']) || (data.firstName is string && data.firstName.size() <= 100)) &&
              (!data.keys().hasAll(['lastName']) || (data.lastName is string && data.lastName.size() <= 100)) &&
              (!data.keys().hasAll(['country']) || (data.country is string && data.country.size() <= 100)) &&

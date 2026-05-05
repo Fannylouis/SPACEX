@@ -327,7 +327,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-white/5 text-center">
+          <div className="mt-8 pt-8 border-t border-white/5 text-center flex flex-col gap-3">
             <p className="text-[10px] text-slate-500 uppercase tracking-widest">
               Existing user? <Link to="/invest/login" className="text-white hover:text-brand-primary transition-colors font-bold">Authenticate Vault</Link>
             </p>

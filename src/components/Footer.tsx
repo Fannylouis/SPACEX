@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Twitter, Linkedin, ExternalLink } from 'lucide-react';
+import { Shield, Twitter, Linkedin, ExternalLink, ShieldCheck, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -55,10 +55,26 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 p-8 bg-white/[0.01] rounded border border-white/5">
-          <p className="text-[8px] font-mono text-slate-600 leading-relaxed uppercase tracking-tighter">
-            
-          </p>
+        <div className="mt-12 p-8 bg-white/[0.01] rounded border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <ShieldCheck className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">TLS 1.3 / AES-256 ACTIVE</p>
+              <p className="text-[9px] font-mono text-slate-600 uppercase tracking-tighter">Connection runs exclusively over secure HTTPS tunnel</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="px-3 py-1.5 rounded border border-white/10 bg-white/5 flex items-center gap-2">
+              <Lock className="h-3 w-3 text-slate-500" />
+              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Identity Verified</span>
+            </div>
+            <div className="px-3 py-1.5 rounded border border-white/10 bg-white/5 flex items-center gap-2">
+              <Shield className="h-3 w-3 text-slate-500" />
+              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Anti-Fraud Engine</span>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

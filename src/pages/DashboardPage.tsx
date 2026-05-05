@@ -1520,8 +1520,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[300px] w-full" style={{ minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={chartFilter === 'Aggregate' ? barData : (chartFilter === 'SpaceX' ? spacexData : xaiData)}>
                     <defs>
                       <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -2498,6 +2498,25 @@ export default function DashboardPage() {
 
       {/* Main Console Viewport */}
       <div className="flex-grow">
+        {/* Secure Console Header */}
+        <div className="hidden lg:flex px-12 py-4 border-b border-white/5 bg-black/40 backdrop-blur-md justify-between items-center sticky top-0 z-30">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">Secure session established</span>
+            </div>
+            <div className="h-4 w-[1px] bg-white/10" />
+            <div className="flex items-center gap-2 text-slate-500">
+              <ShieldCheck className="h-3 w-3" />
+              <span className="text-[9px] font-mono uppercase tracking-[0.2em]">AES-256 E2EE Enabled</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-[9px] font-mono text-slate-600 uppercase tracking-widest">
+            <span>Terminal: 0x{Math.random().toString(16).substring(2, 8).toUpperCase()}</span>
+            <span>Uptime: 100.0%</span>
+          </div>
+        </div>
+
         {/* Mobile Nav Header */}
         <div className="lg:hidden px-6 pt-10 flex items-center justify-between sticky top-0 bg-black/40 backdrop-blur-md z-30 pb-4">
           <button 

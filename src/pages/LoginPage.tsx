@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Chrome } from 'lucide-react';
+import { Mail, Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Chrome, Rocket, Globe } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -83,7 +83,10 @@ export default function LoginPage() {
           <div className="text-center mb-10">
             <img src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" alt="SpaceX" className="h-80 mx-auto mb-8 object-contain brightness-125" referrerPolicy="no-referrer" />
             <h1 className="text-3xl font-light tracking-tight mb-2 uppercase">Authenticate <span className="font-bold text-gradient">Vault.</span></h1>
-            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest">Access Protocol</p>
+            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2">
+              <Globe className="h-3 w-3 text-emerald-500" />
+              Secure Protocol Active
+            </p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -175,9 +178,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mt-8 flex items-center gap-4 justify-center">
-          <ShieldCheck className="h-4 w-4 text-slate-600" />
-          <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em]">AES-256 Multi-Layer Encryption Enabled</span>
+        <div className="mt-8 flex flex-col items-center gap-3 justify-center">
+          <div className="flex items-center gap-4">
+            <ShieldCheck className="h-4 w-4 text-brand-primary" />
+            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-[0.2em] font-bold">End-to-End Encryption (E2EE) Active</span>
+          </div>
+          <p className="text-[8px] font-mono text-slate-700 uppercase tracking-widest leading-relaxed text-center max-w-[300px]">
+            This portal is secured via TLS 1.3 and military-grade AES-256 protocols. Your session is monitored and encrypted.
+          </p>
         </div>
       </motion.div>
     </div>

@@ -216,8 +216,7 @@ export default function AdminPage() {
   };
 
   const handleReconstructBartholomewPortfolio = async (userId: string) => {
-    if (!confirm("Are you sure you want to reconstruct the 2026 Q1 portfolio for this user? This will overwrite existing balance and add 27 transactions.")) return;
-    
+    setDataLoading(true);
     try {
       await runTransaction(db, async (transaction) => {
         const userRef = doc(db, 'users', userId);
@@ -286,9 +285,6 @@ export default function AdminPage() {
         });
         
         // 4. Set final metrics
-        // Metrics based on user prompt:
-        // Available Balance: $20,257.50
-        // Total Profit (Gross): $3,500 * 13 = $45,500
         transaction.update(userRef, { 
           balance: 20257.50,
           totalProfit: 45500.00
@@ -298,6 +294,8 @@ export default function AdminPage() {
     } catch (err) {
       console.error(err);
       alert("Failed to reconstruct portfolio: " + (err instanceof Error ? err.message : "Internal Error"));
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -307,9 +305,16 @@ export default function AdminPage() {
       if (isAdminUser) {
         // Don't let current user demote themselves easily?
         if (userId === user?.uid) {
-           if (!window.confirm("Are you sure you want to remove your own admin privileges? You will lose access to this portal.")) {
-             return;
-           }
+           setShowConfirmModal({
+             type: 'admin',
+             targetId: userId,
+             message: "Are you sure you want to remove your own admin privileges? You will lose access to this portal.",
+             onAction: async () => {
+               await deleteDoc(doc(db, 'admins', userId));
+               setShowConfirmModal(null);
+             }
+           });
+           return;
         }
         await deleteDoc(doc(db, 'admins', userId));
       } else {
@@ -323,44 +328,62 @@ export default function AdminPage() {
     }
   };
 
+  const [showConfirmModal, setShowConfirmModal] = useState<{
+    type: 'delete' | 'sync' | 'admin' | 'none';
+    targetId: string;
+    message: string;
+    onAction: () => Promise<void>;
+  } | null>(null);
+
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm("CRITICAL: Are you sure you want to PERMANENTLY DELETE this user account? This action cannot be undone and will remove all their financial data from the records.")) return;
+    console.log("handleDeleteUser triggered for:", userId);
     
-    console.log("Starting deletion for user:", userId);
+    setDataLoading(true);
     try {
+      console.log("Proceeding with deletion for user:", userId);
       const batch = writeBatch(db);
       
       // 1. Queue associated transactions for deletion
       const txQuery = query(collection(db, 'transactions'), where('userId', '==', userId));
       const txSnap = await getDocs(txQuery);
       console.log(`Found ${txSnap.size} transactions to delete`);
-      txSnap.docs.forEach(doc => batch.delete(doc.ref));
+      txSnap.docs.forEach(doc => {
+        console.log("Queuing transaction for deletion:", doc.id);
+        batch.delete(doc.ref);
+      });
 
       // 2. Queue associated orders for deletion
       const orderQuery = query(collection(db, 'orders'), where('userId', '==', userId));
       const orderSnap = await getDocs(orderQuery);
       console.log(`Found ${orderSnap.size} orders to delete`);
-      orderSnap.docs.forEach(doc => batch.delete(doc.ref));
+      orderSnap.docs.forEach(doc => {
+        console.log("Queuing order for deletion:", doc.id);
+        batch.delete(doc.ref);
+      });
 
       // 3. Queue admin status for deletion
+      console.log("Queuing admin record for deletion (if exists)");
       batch.delete(doc(db, 'admins', userId));
 
       // 4. Queue user document for deletion
+      console.log("Queuing user document for deletion");
       batch.delete(doc(db, 'users', userId));
       
-      // Execute all deletions atomically
+      console.log("Committing batch...");
       await batch.commit();
       console.log("Batch deletion committed successfully");
       
       if (selectedUser?.id === userId) {
         setSelectedUser(null);
       }
-      
+      setShowConfirmModal(null);
       alert("User account and associated data purged successfully.");
     } catch (err) {
-      console.error("Error deleting user:", err);
+      console.error("FATAL Error during user deletion:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       alert("Failed to delete user: " + errorMessage);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -532,17 +555,17 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2 transition-opacity">
                           <button 
                             onClick={() => handleUpdateKyc(u.id, 'Verified')}
-                            className="p-2 hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-400 rounded-lg transition-colors"
+                            className="p-2 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-500/50 hover:text-emerald-400 rounded-lg transition-colors border border-emerald-500/10"
                             title="Verify User"
                           >
                             <CheckCircle className="h-4 w-4" />
                           </button>
                           <button 
                             onClick={() => handleUpdateKyc(u.id, 'Rejected')}
-                            className="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-lg transition-colors"
+                            className="p-2 bg-red-500/5 hover:bg-red-500/10 text-red-500/50 hover:text-red-400 rounded-lg transition-colors border border-red-500/10"
                             title="Reject KYC"
                           >
                             <XCircle className="h-4 w-4" />
@@ -550,16 +573,21 @@ export default function AdminPage() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteUser(u.id);
+                              setShowConfirmModal({
+                                type: 'delete',
+                                targetId: u.id,
+                                message: "CRITICAL: Are you sure you want to PERMANENTLY DELETE this user account? This action cannot be undone.",
+                                onAction: () => handleDeleteUser(u.id)
+                              });
                             }}
-                            className="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-lg transition-colors"
+                            className="p-2 bg-red-500/5 hover:bg-red-500/10 text-red-500/50 hover:text-red-400 rounded-lg transition-colors border border-red-500/10"
                             title="Delete Account"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
                           <button 
                             onClick={() => setSelectedUser(u)}
-                            className="p-2 hover:bg-brand-primary/10 text-slate-500 hover:text-brand-primary rounded-lg transition-colors"
+                            className="p-2 bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary/50 hover:text-brand-primary rounded-lg transition-colors border border-brand-primary/10"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </button>
@@ -982,11 +1010,19 @@ export default function AdminPage() {
                     <button 
                       onClick={() => {
                         if (selectedUser.firstName?.toLowerCase().includes('john') || selectedUser.lastName?.toLowerCase().includes('bartholomew')) {
-                          handleReconstructBartholomewPortfolio(selectedUser.id);
+                          setShowConfirmModal({
+                            type: 'sync',
+                            targetId: selectedUser.id,
+                            message: "Are you sure you want to reconstruct the 2026 Q1 portfolio for John Bartholomew? This will overwrite existing balance.",
+                            onAction: () => handleReconstructBartholomewPortfolio(selectedUser.id).then(() => setShowConfirmModal(null))
+                          });
                         } else {
-                          if (confirm("This utility is designed for John Bartholomew. Do you want to apply this specific 2026 data to " + selectedUser.firstName + " anyway?")) {
-                            handleReconstructBartholomewPortfolio(selectedUser.id);
-                          }
+                          setShowConfirmModal({
+                            type: 'sync',
+                            targetId: selectedUser.id,
+                            message: `This utility is designed for John Bartholomew. Do you want to apply this specific 2026 data to ${selectedUser.firstName} anyway?`,
+                            onAction: () => handleReconstructBartholomewPortfolio(selectedUser.id).then(() => setShowConfirmModal(null))
+                          });
                         }
                       }}
                       className="px-4 py-2 bg-emerald-500 text-black rounded-lg text-[9px] font-mono uppercase tracking-widest font-bold hover:bg-white transition-all"
@@ -1028,26 +1064,87 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <div className="pt-4 flex gap-4">
+                <div className="pt-4 grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => {
+                        handleUpdateKyc(selectedUser.id, 'Verified');
+                        setSelectedUser(null);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-bold uppercase tracking-[0.2em] py-4 rounded-xl transition-all"
+                    >
+                      Authorize Identity
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleUpdateKyc(selectedUser.id, 'Rejected');
+                        setSelectedUser(null);
+                      }}
+                      className="bg-red-950/40 hover:bg-red-900/60 text-red-500 border border-red-500/20 font-mono text-[10px] font-bold uppercase tracking-[0.2em] py-4 rounded-xl transition-all"
+                    >
+                      Reject Audit
+                    </button>
+                  </div>
                   <button 
                     onClick={() => {
-                      handleUpdateKyc(selectedUser.id, 'Verified');
-                      setSelectedUser(null);
+                      setShowConfirmModal({
+                        type: 'delete',
+                        targetId: selectedUser.id,
+                        message: "CRITICAL: PURGE ACCOUNT PERMANENTLY? This clears all audit history and records.",
+                        onAction: () => handleDeleteUser(selectedUser.id)
+                      });
                     }}
-                    className="flex-grow bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-bold uppercase tracking-[0.2em] py-4 rounded-xl transition-all"
+                    className="w-full bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 font-mono text-[10px] font-bold uppercase tracking-[0.2em] py-3 rounded-xl transition-all flex items-center justify-center gap-2"
                   >
-                    Authorize Identity
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleUpdateKyc(selectedUser.id, 'Rejected');
-                      setSelectedUser(null);
-                    }}
-                    className="flex-grow bg-red-950/40 hover:bg-red-900/60 text-red-500 border border-red-500/20 font-mono text-[10px] font-bold uppercase tracking-[0.2em] py-4 rounded-xl transition-all"
-                  >
-                    Reject Audit
+                    <Trash2 className="h-4 w-4" />
+                    Purge Account Permanently
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !dataLoading && setShowConfirmModal(null)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[#0a0a0a] border border-red-500/20 rounded-3xl overflow-hidden shadow-2xl p-8 text-center"
+            >
+              <div className="h-16 w-16 bg-red-500/10 rounded-2xl flex items-center justify-center border border-red-500/20 mx-auto mb-6">
+                <AlertCircle className="h-8 w-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold uppercase tracking-tight text-white mb-2">Confirm Protocol</h3>
+              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest leading-relaxed mb-8">
+                {showConfirmModal.message}
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  disabled={dataLoading}
+                  onClick={() => setShowConfirmModal(null)}
+                  className="bg-white/5 hover:bg-white/10 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  disabled={dataLoading}
+                  onClick={() => showConfirmModal.onAction()}
+                  className="bg-red-600 hover:bg-red-500 text-white font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)] disabled:opacity-50"
+                >
+                  {dataLoading ? "Processing..." : "Confirm"}
+                </button>
               </div>
             </motion.div>
           </div>

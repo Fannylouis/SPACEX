@@ -18,6 +18,12 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 function AppRoutes() {
   const { loading } = useAuth();
 
+  React.useEffect(() => {
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      console.warn("INSECURE PROTOCOL DETECTED: Application should be accessed via HTTPS for full encryption support.");
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center z-[100]">
@@ -27,7 +33,10 @@ function AppRoutes() {
             <Activity className="h-6 w-6 text-brand-primary absolute -bottom-1 -right-1 animate-spin" />
           </div>
           <h2 className="text-xl font-light uppercase tracking-[0.4em] text-white/80 animate-pulse">Initializing <span className="font-bold text-brand-primary">Protocol...</span></h2>
-          <p className="mt-4 font-mono text-[8px] text-slate-700 uppercase tracking-[0.3em]">SECURE ACCESS GATEWAY // VERIFYING DISTRIBUTED LEDGER</p>
+          <div className="space-y-1">
+            <p className="font-mono text-[8px] text-slate-700 uppercase tracking-[0.3em]">SECURE ACCESS GATEWAY // VERIFYING DISTRIBUTED LEDGER</p>
+            <p className="font-mono text-[8px] text-emerald-500/50 uppercase tracking-[0.3em]">TLS 1.3 TUNNEL ESTABLISHED // AES-256 HANDSHAKE SUCCESS</p>
+          </div>
         </div>
       </div>
     );

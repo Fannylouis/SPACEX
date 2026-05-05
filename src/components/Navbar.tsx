@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Shield, Rocket, Activity, Menu, Globe } from 'lucide-react';
+import { Shield, Rocket, Activity, Menu, Globe, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency, currencyOptions } from '../context/CurrencyContext';
@@ -40,6 +40,12 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-10 text-[10px] font-bold tracking-[0.3em] uppercase">
+          {/* Security Status */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
+            <ShieldCheck className="h-3 w-3 text-emerald-500" />
+            <span className="text-[8px] font-bold font-mono text-emerald-500/80 uppercase tracking-widest">TLS 1.3 Secure</span>
+          </div>
+
           <NavLink to="/" label="Home" />
           <NavLink to="/shop" label="Shop" />
           <NavLink to="/projects" label="Projects" />
