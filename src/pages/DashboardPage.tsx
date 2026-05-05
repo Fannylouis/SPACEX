@@ -89,6 +89,8 @@ const aiPlans = [
   { id: 'elite', name: 'Elite', price: '$499', desc: 'Direct desk access and concierge-level allocation.', color: 'text-purple-400', border: 'border-purple-400/20 bg-purple-400/5' },
 ];
 
+const toHttps = (url: string) => url?.replace(/^http:\/\//i, 'https://');
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, userData, logout, updateUserData, resetPassword, loading: authLoading } = useAuth();
@@ -1176,7 +1178,7 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 gap-6">
                 {orders.map((order: any) => (
                   <div key={order.orderId} className="card-panel p-8 bg-white/[0.01] hover:bg-white/[0.02] transition-all group overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-64 h-full bg-cover bg-center opacity-10 group-hover:scale-110 group-hover:opacity-20 transition-all grayscale" style={{ backgroundImage: `url(${order.image})` }} />
+                    <div className="absolute top-0 right-0 w-64 h-full bg-cover bg-center opacity-10 group-hover:scale-110 group-hover:opacity-20 transition-all grayscale" style={{ backgroundImage: `url(${toHttps(order.image)})` }} />
                     <div className="relative z-10 flex flex-col md:flex-row justify-between gap-8">
                       <div>
                         <div className="flex items-center gap-3 mb-2">

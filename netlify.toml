@@ -1,0 +1,11 @@
+[[redirects]]
+  from = "http://space-xai.net/*"
+  to = "https://space-xai.net/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.space-xai.net/*"
+  to = "https://space-xai.net/:splat"
+  status = 301
+  force = true
