@@ -23,9 +23,10 @@ async function startServer() {
   const getResend = () => {
     const key = process.env.RESEND_API_KEY;
     if (!key) {
-      console.warn("RESEND_API_KEY is missing. Email dispatch is in simulation mode.");
+      console.warn("[Resend Protocol] RESEND_API_KEY is not detected in environment. Simulation mode active.");
       return null;
     }
+    console.info("[Resend Protocol] RESEND_API_KEY detected. Initializing live dispatch.");
     if (!resend) resend = new Resend(key);
     return resend;
   };

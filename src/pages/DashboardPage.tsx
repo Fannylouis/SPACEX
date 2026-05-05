@@ -38,7 +38,9 @@ import {
   Calculator,
   BarChart3,
   X,
-  CheckCircle2,
+  CheckCircle,
+  AlertTriangle,
+  ShieldAlert,
   MessageSquare,
   Send,
   HelpCircle,
@@ -56,6 +58,7 @@ import {
   Bar
 } from 'recharts';
 import { sendLoginAlert } from '../services/emailService';
+import { sendConfirmationEmail } from '../lib/email';
 import { 
   collection, 
   query, 
@@ -2173,7 +2176,7 @@ export default function DashboardPage() {
 
                         {investSuccess ? (
                           <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-3" />
+                            <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-3" />
                             <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400 mb-1">Transaction Success</h4>
                             <p className="text-[9px] font-mono text-emerald-500/60 uppercase mb-6">Position updated successfully.</p>
                             <button 
@@ -2351,7 +2354,7 @@ export default function DashboardPage() {
                       animate={{ opacity: 1, scale: 1 }}
                       className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-4"
                     >
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <CheckCircle className="h-5 w-5 text-emerald-500" />
                       <div>
                         <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Dispatch Success</p>
                         <p className="text-[8px] font-mono text-emerald-500/70 uppercase">Ticket #{(Math.random() * 10000).toFixed(0)} submitted to headquarters.</p>
@@ -2642,8 +2645,8 @@ export default function DashboardPage() {
                               !emailStatus.success ? 'bg-red-500/20' :
                               emailStatus.simulated ? 'bg-amber-500/20' : 'bg-emerald-500/20'
                             }`}>
-                              {!emailStatus.success ? <X className="h-5 w-5" /> : 
-                               emailStatus.simulated ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                              {!emailStatus.success ? <AlertTriangle className="h-5 w-5" /> : 
+                               emailStatus.simulated ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
                             </div>
                             <div>
                                <p className="text-[10px] font-bold uppercase tracking-widest mb-1">
@@ -2651,7 +2654,7 @@ export default function DashboardPage() {
                                   emailStatus.simulated ? 'Diagnostic: Simulation active' : 'Diagnostic: Live Link Active'}
                                </p>
                                <p className="text-[10px] font-mono leading-relaxed opacity-80">
-                                 {emailStatus.message}
+                                 {String(emailStatus.message || '')}
                                </p>
                                {emailStatus.success && !emailStatus.simulated && (
                                  <p className="text-[8px] font-mono text-emerald-500/50 uppercase mt-2 pt-2 border-t border-emerald-500/10">
