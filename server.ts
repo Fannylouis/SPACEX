@@ -21,12 +21,16 @@ async function startServer() {
   // Initialize Resend lazily
   let resend: Resend | null = null;
   const getResend = () => {
-    const key = process.env.RESEND_API_KEY;
+    // Check multiple possible environment variable names
+    const key = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY || process.env.RESEND_KEY;
+    
     if (!key) {
-      console.warn("[Resend Protocol] RESEND_API_KEY is not detected in environment. Simulation mode active.");
+      const availableKeys = Object.keys(process.env).filter(k => k.toLowerCase().includes('resend') || k.toLowerCase().includes('api'));
+      console.warn(`[Resend Protocol] API Key not found. Detected related env keys: ${availableKeys.join(', ')}`);
       return null;
     }
-    console.info("[Resend Protocol] RESEND_API_KEY detected. Initializing live dispatch.");
+    
+    console.info("[Resend Protocol] API Key detected. Initializing live dispatch.");
     if (!resend) resend = new Resend(key);
     return resend;
   };
@@ -36,48 +40,40 @@ async function startServer() {
     const { to, subject, html } = req.body;
     const resendClient = getResend();
 
-    console.log(`[Server] Attempting to send email to: ${to}`);
+    console.log(`[Server] Request received for: ${to}`);
 
     if (resendClient) {
       try {
-        // Validation: Ensure required fields are present
         if (!to || !subject || !html) {
-          const missing = [];
-          if (!to) missing.push("recipient");
-          if (!subject) missing.push("subject");
-          if (!html) missing.push("content");
-          
-          console.error("[Resend Error] Missing mandatory fields:", missing.join(", "));
           return res.status(400).json({ 
             success: false, 
-            error: { name: "local_validation_error", message: `Missing mandatory fields: ${missing.join(", ")}` } 
+            error: { message: "Missing mandatory fields (to, subject, or html)." } 
           });
         }
 
         const { data, error } = await resendClient.emails.send({
           from: "SpaceX Vault <onboarding@resend.dev>",
-          to: Array.isArray(to) ? to : [to], // Force array to be safe
+          to: Array.isArray(to) ? to : [to],
           subject: String(subject),
           html: String(html),
         });
 
         if (error) {
-          console.error("[Resend Error] API call failed:", JSON.stringify(error, null, 2));
+          console.error("[Resend Error] API call rejected:", error);
           return res.status(400).json({ success: false, error });
         }
         
-        console.log("[Resend Success] Email dispatched successfully:", data);
         return res.json({ success: true, data });
       } catch (err: any) {
-        console.error("[Server Error]", err);
-        return res.status(500).json({ success: false, error: err.message });
+        console.error("[Server Error] Exception during dispatch:", err);
+        return res.status(500).json({ success: false, error: { message: err.message || "Internal server error" } });
       }
     } else {
-      console.log(`[SIMULATION] Email to ${to} ("${subject}") simulated successfully.`);
+      console.log(`[SIMULATION] Responding with simulation data for ${to}`);
       return res.json({ 
         success: true, 
         simulated: true,
-        message: "Email simulated. To send real emails, please provide a RESEND_API_KEY in the settings." 
+        message: "SIMULATION MODE: RESEND_API_KEY not found in environment. Please add it to your project settings to enable live emails." 
       });
     }
   });

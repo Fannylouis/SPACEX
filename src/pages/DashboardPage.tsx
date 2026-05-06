@@ -374,29 +374,39 @@ export default function DashboardPage() {
 
   const handleTestEmail = async () => {
     if (!user?.email) return;
+    
+    // Clear any previous status for a clean start
     setEmailStatus({ loading: true });
+    
     try {
+      console.log("[Diagnostics] Initiating transmission test for:", user.email);
       const response = await sendLoginAlert(user.email);
-      if (response.success) {
+      
+      if (response && response.success) {
         setEmailStatus({ 
           success: true, 
           loading: false, 
           simulated: response.simulated,
-          message: response.simulated 
-            ? "SIMULATION MODE: API Key not detected in system environment." 
-            : "LIVE MODE: Secure email transmission protocol verified." 
+          message: response.message || (response.simulated 
+            ? "SIMULATION MODE: API Key not detected in project settings." 
+            : "LIVE MODE: Secure email transmission protocol verified.")
         });
       } else {
+        const errorMsg = response?.message || response?.error?.message || "FAILURE: Protocol handshake rejected.";
         setEmailStatus({ 
           success: false, 
           loading: false, 
-          message: response.message || "FAILURE: Resend API rejected the request. Verify your API key and domain status."
+          message: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg)
         });
       }
     } catch (err: any) {
-      setEmailStatus({ success: false, loading: false, message: "CRITICAL: Tunnel connection failed." });
+      console.error("[Diagnostics Error]", err);
+      setEmailStatus({ 
+        success: false, 
+        loading: false, 
+        message: "CRITICAL: Could not reach the communication terminal." 
+      });
     }
-    setTimeout(() => setEmailStatus(null), 10000);
   };
 
   const handleFocusAsset = (ticker: string) => {
@@ -1359,13 +1369,13 @@ export default function DashboardPage() {
                 </h1>
                 <p className="font-mono text-[10px] text-slate-500 uppercase tracking-[0.3em]">SECURE ACCESS SESSION: ACTIVE</p>
               </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-xl">
+              <div className="w-full lg:w-auto grid grid-cols-2 lg:flex lg:flex-wrap gap-3 lg:gap-4 items-center">
+                <div className="col-span-2 lg:col-auto flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-xl">
                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest pl-2">Currency</span>
                   <select 
                     value={selectedCurrency.code}
                     onChange={(e) => setCurrencyByCode(e.target.value)}
-                    className="bg-black/40 border-none text-[10px] font-mono text-white uppercase focus:outline-none focus:ring-0 cursor-pointer py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
+                    className="flex-1 bg-black/40 border-none text-[10px] font-mono text-white uppercase focus:outline-none focus:ring-0 cursor-pointer py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     {currencyOptions.map(opt => (
                       <option key={opt.code} value={opt.code} className="bg-slate-900">{opt.label}</option>
@@ -1374,24 +1384,24 @@ export default function DashboardPage() {
                 </div>
                 <button 
                   onClick={() => setActiveTab('my-projects')}
-                  className="px-6 py-4 bg-brand-primary text-black font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] flex items-center gap-2 group"
+                  className="col-span-2 lg:col-auto px-6 py-4 bg-brand-primary text-black font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] flex items-center justify-center gap-2 group"
                 >
                   <Rocket className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   Invest Now
                 </button>
-                <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl">
-                  <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Available Balance</span>
-                  <span className="text-xl font-mono text-white font-bold">{formatPrice(currentBalance)}</span>
+                <div className="px-4 py-3 lg:px-6 lg:py-4 card-panel bg-white/5 border-white/10 rounded-xl flex flex-col justify-center">
+                  <span className="text-[7px] lg:text-[8px] font-mono text-slate-500 uppercase block mb-1">Available Balance</span>
+                  <span className="text-sm lg:text-xl font-mono text-white font-bold">{formatPrice(currentBalance)}</span>
                 </div>
-                <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl">
-                  <span className="text-[8px] font-mono text-slate-500 uppercase block mb-1">Total Invested</span>
-                  <span className="text-xl font-mono text-brand-primary/80 font-bold">{formatPrice(totalInvested)}</span>
+                <div className="px-4 py-3 lg:px-6 lg:py-4 card-panel bg-white/5 border-white/10 rounded-xl flex flex-col justify-center">
+                  <span className="text-[7px] lg:text-[8px] font-mono text-slate-500 uppercase block mb-1">Total Invested</span>
+                  <span className="text-sm lg:text-xl font-mono text-brand-primary/80 font-bold">{formatPrice(totalInvested)}</span>
                 </div>
-                <div className="px-6 py-4 card-panel bg-white/5 border-white/10 rounded-xl relative group">
+                <div className="col-span-2 lg:col-auto px-4 py-3 lg:px-6 lg:py-4 card-panel bg-white/5 border-white/10 rounded-xl relative group flex flex-col justify-center">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-[8px] font-mono text-emerald-500/60 uppercase block">Total Profit</span>
+                    <span className="text-[7px] lg:text-[8px] font-mono text-emerald-500/60 uppercase block">Total Profit / Earnings</span>
                   </div>
-                  <span className="text-xl font-mono text-emerald-400 font-bold tracking-tighter">
+                  <span className="text-sm lg:text-xl font-mono text-emerald-400 font-bold tracking-tighter">
                     +{formatPrice(totalProfit)}
                   </span>
                 </div>
@@ -2627,40 +2637,46 @@ export default function DashboardPage() {
                       <motion.div 
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className={`p-6 rounded-xl border flex items-center gap-4 ${
-                          emailStatus.loading ? 'bg-white/5 border-white/10' :
+                        className={`p-6 rounded-xl border flex items-start gap-4 transition-colors duration-500 ${
+                          emailStatus.loading ? 'bg-white/5 border-white/10 text-slate-400' :
                           !emailStatus.success ? 'bg-red-500/10 border-red-500/20 text-red-500' :
                           emailStatus.simulated ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
                           'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                         }`}
                       >
                         {emailStatus.loading ? (
-                          <div className="flex items-center gap-3 w-full">
+                          <div className="flex items-center gap-3 w-full py-2">
                             <div className="h-4 w-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400">Verifying Protocol Link...</span>
+                            <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Verifying Protocol Link...</span>
                           </div>
                         ) : (
                           <>
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 mt-1 ${
                               !emailStatus.success ? 'bg-red-500/20' :
                               emailStatus.simulated ? 'bg-amber-500/20' : 'bg-emerald-500/20'
                             }`}>
                               {!emailStatus.success ? <AlertTriangle className="h-5 w-5" /> : 
                                emailStatus.simulated ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
                             </div>
-                            <div>
-                               <p className="text-[10px] font-bold uppercase tracking-widest mb-1">
-                                 {!emailStatus.success ? 'Protocol Failure' : 
+                            <div className="flex-1 min-w-0">
+                               <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                                 {!emailStatus.success ? 'Protocol Warning' : 
                                   emailStatus.simulated ? 'Diagnostic: Simulation active' : 'Diagnostic: Live Link Active'}
-                               </p>
-                               <p className="text-[10px] font-mono leading-relaxed opacity-80">
+                                </p>
+                               <p className="text-[10px] font-mono leading-relaxed break-words opacity-90">
                                  {String(emailStatus.message || '')}
                                </p>
                                {emailStatus.success && !emailStatus.simulated && (
-                                 <p className="text-[8px] font-mono text-emerald-500/50 uppercase mt-2 pt-2 border-t border-emerald-500/10">
-                                   Note: Deliveries are currently restricted to authorized account emails in sandbox mode.
+                                 <p className="text-[8px] font-mono text-emerald-500/50 uppercase mt-3 pt-3 border-t border-emerald-500/10">
+                                   Status: Transmission confirmed. Verification records updated.
                                  </p>
                                )}
+                               <button 
+                                 onClick={() => setEmailStatus(null)}
+                                 className="mt-4 text-[8px] uppercase tracking-tighter opacity-50 hover:opacity-100 transition-opacity"
+                                >
+                                 [ Dismiss Diagnostic ]
+                               </button>
                             </div>
                           </>
                         )}
@@ -2875,9 +2891,15 @@ export default function DashboardPage() {
             <span className="text-[11px] font-mono font-bold uppercase tracking-[0.2em]">Access Console</span>
           </button>
           
-          <div className="text-right">
-             <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em] block mb-1">Vault Balance</span>
-             <span className="text-xl font-mono text-white font-bold tracking-tight">{formatPrice(userData?.balance || 0)}</span>
+          <div className="flex flex-col items-end gap-1">
+             <div className="flex flex-col items-end">
+                <span className="text-[8px] font-mono text-slate-600 uppercase tracking-[0.2em] block">Vault Balance</span>
+                <span className="text-lg font-mono text-white font-bold tracking-tight leading-none">{formatPrice(userData?.balance || 0)}</span>
+             </div>
+             <div className="flex flex-col items-end">
+                <span className="text-[8px] font-mono text-emerald-500/60 uppercase tracking-[0.2em] block">Earnings</span>
+                <span className="text-sm font-mono text-emerald-400 font-bold tracking-tight leading-none">+{formatPrice(totalProfit)}</span>
+             </div>
           </div>
         </div>
 
