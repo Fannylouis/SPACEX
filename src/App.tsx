@@ -8,6 +8,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProjectsPage from './pages/ProjectsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { ShieldCheck, Activity } from 'lucide-react';
@@ -75,8 +77,8 @@ function AppRoutes() {
         } />
 
         {/* 404 handled by Navigate or just leaving as is - user mentioned privacy/terms/contact/careers is 404 */}
-        <Route path="privacy" element={<Navigate to="/404" replace />} />
-        <Route path="terms" element={<Navigate to="/404" replace />} />
+        <Route path="privacy" element={<PrivacyPage />} />
+        <Route path="terms" element={<TermsPage />} />
         <Route path="contact" element={<Navigate to="/404" replace />} />
         <Route path="careers" element={<Navigate to="/404" replace />} />
         

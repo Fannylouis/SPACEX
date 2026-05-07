@@ -293,7 +293,7 @@ export default function RegisterPage() {
                 className="w-4 h-4 mt-0.5 rounded border-white/10 bg-black accent-brand-primary" 
               />
               <label htmlFor="terms" className="text-[9px] text-slate-500 leading-relaxed uppercase tracking-widest">
-                I agree to the <a href="#" className="text-slate-300 hover:text-brand-primary underline">Quantum Encryption Standards</a> & Access Terms.
+                I agree to the <Link to="/privacy" className="text-slate-300 hover:text-brand-primary underline">Privacy Policy</Link> & <Link to="/terms" className="text-slate-300 hover:text-brand-primary underline">Access Terms</Link>.
               </label>
             </div>
 
