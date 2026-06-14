@@ -67,6 +67,11 @@ export default function AdminPage() {
   const [adminResponse, setAdminResponse] = useState('');
   const [isResponding, setIsResponding] = useState(false);
 
+  // Deposit Approval & Fee Controls
+  const [depositToApprove, setDepositToApprove] = useState<any | null>(null);
+  const [applyDepositCharge, setApplyDepositCharge] = useState(false);
+  const [chargeAmountInput, setChargeAmountInput] = useState('100');
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -154,7 +159,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleApproveDeposit = async (deposit: any) => {
+  const handleApproveDeposit = async (deposit: any, chargeAmount: number = 0) => {
     try {
       await runTransaction(db, async (transaction) => {
         const txRef = doc(db, 'transactions', deposit.id);
@@ -165,9 +170,39 @@ export default function AdminPage() {
           throw new Error("User record not found");
         }
 
-        transaction.update(txRef, { status: 'Completed' });
+        const currentBalance = userDoc.data().balance || 0;
+        let finalBalance = currentBalance + deposit.amount;
+
+        if (chargeAmount > 0) {
+          finalBalance -= chargeAmount;
+          
+          // Create Service Charge transaction
+          const feeRef = doc(collection(db, 'transactions'));
+          transaction.set(feeRef, {
+            userId: deposit.userId,
+            type: 'Service Charge',
+            amount: chargeAmount,
+            asset: 'Account Processing Fee',
+            ticker: 'FEE',
+            status: 'Completed',
+            date: serverTimestamp(),
+            method: 'Account Deduction'
+          });
+
+          transaction.update(txRef, { 
+            status: 'Completed',
+            chargeApplied: true,
+            chargeAmount: chargeAmount
+          });
+        } else {
+          transaction.update(txRef, { 
+            status: 'Completed',
+            chargeApplied: false
+          });
+        }
+
         transaction.update(userRef, { 
-          balance: (userDoc.data().balance || 0) + deposit.amount 
+          balance: finalBalance 
         });
       });
     } catch (err) {
@@ -801,8 +836,15 @@ export default function AdminPage() {
                             {d.status === 'Pending' ? (
                               <>
                                 <button 
-                                  onClick={() => handleApproveDeposit(d)}
-                                  className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all"
+                                  onClick={() => {
+                                    setDepositToApprove(d);
+                                    // Check if this user has any already COMPLETED deposits
+                                    const userHasCompleted = deposits.some(dep => dep.userId === d.userId && dep.status === 'Completed');
+                                    // If no completed deposits exist, default 'applyDepositCharge' to true
+                                    setApplyDepositCharge(!userHasCompleted);
+                                    setChargeAmountInput('100');
+                                  }}
+                                  className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all cursor-pointer"
                                 >
                                   Approve
                                 </button>
@@ -1404,6 +1446,144 @@ export default function AdminPage() {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {depositToApprove && (() => {
+          const isFirstDeposit = !deposits.some(dep => dep.userId === depositToApprove.userId && dep.status === 'Completed' && dep.id !== depositToApprove.id);
+          const userRecord = users.find(u => u.id === depositToApprove.userId);
+          const finalAmount = applyDepositCharge 
+            ? Math.max(0, depositToApprove.amount - (parseFloat(chargeAmountInput) || 0))
+            : depositToApprove.amount;
+
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => !dataLoading && setDepositToApprove(null)}
+                className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-md bg-[#0a0a0a] border border-brand-primary/20 rounded-3xl overflow-hidden shadow-2xl p-8"
+              >
+                <div className="text-center mb-6">
+                  <div className="h-16 w-16 bg-brand-primary/10 rounded-2xl flex items-center justify-center border border-brand-primary/20 mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-brand-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold uppercase tracking-tight text-white mb-1">Verify Deposit & Fees</h3>
+                  <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest leading-relaxed">
+                    Account Processing & Charge Control Gateway
+                  </p>
+                </div>
+
+                {isFirstDeposit ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center mb-6">
+                    <p className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-widest">
+                      ✨ First Deposit Detected
+                    </p>
+                    <p className="text-[9px] font-mono text-slate-400 uppercase mt-1">
+                      Account has no completed deposits on file.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center mb-6">
+                    <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                      Subsequent Deposit
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between items-center py-2 border-b border-white/5">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">User Access Ref:</span>
+                    <span className="text-xs font-mono text-white font-bold">{userRecord?.email || depositToApprove.userId}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-white/5">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Actual Deposited:</span>
+                    <span className="text-sm font-mono text-emerald-400 font-bold">${depositToApprove.amount.toLocaleString()}</span>
+                  </div>
+
+                  <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-mono text-slate-300 uppercase tracking-widest font-bold">Apply Deposit Charge?</span>
+                        <span className="text-[8px] font-mono text-slate-500 uppercase mt-0.5">Deduct fee from credited balance</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={applyDepositCharge}
+                          onChange={(e) => setApplyDepositCharge(e.target.checked)}
+                          className="sr-only peer" 
+                        />
+                        <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-brand-primary after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary/20"></div>
+                      </label>
+                    </div>
+
+                    {applyDepositCharge && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">Charge Amount ($):</label>
+                          <span className="text-[8px] font-mono text-slate-500">Edit value to customize</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          value={chargeAmountInput}
+                          onChange={(e) => setChargeAmountInput(e.target.value)}
+                          placeholder="Enter charge amount"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white outline-none focus:border-brand-primary"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 border-t border-brand-primary/10 mt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">Total Credited Amount:</span>
+                      <span className="text-[8px] font-mono text-slate-500 uppercase">Adding to user balance</span>
+                    </div>
+                    <span className="text-lg font-mono text-brand-primary font-bold">
+                      ${finalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    disabled={dataLoading}
+                    onClick={() => setDepositToApprove(null)}
+                    className="bg-white/5 hover:bg-white/10 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    disabled={dataLoading || (applyDepositCharge && (!chargeAmountInput || parseFloat(chargeAmountInput) < 0))}
+                    onClick={async () => {
+                      setDataLoading(true);
+                      try {
+                        const chargeAmt = applyDepositCharge ? (parseFloat(chargeAmountInput) || 0) : 0;
+                        await handleApproveDeposit(depositToApprove, chargeAmt);
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        setDataLoading(false);
+                        setDepositToApprove(null);
+                      }
+                    }}
+                    className="bg-brand-primary text-black font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.05)] disabled:opacity-50 cursor-pointer"
+                  >
+                    {dataLoading ? "Applying..." : applyDepositCharge ? "Approve with Charge" : "Remove & Approve Full"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
