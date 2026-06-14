@@ -2245,9 +2245,9 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-start z-10">
                    <div className="flex items-center gap-3">
                       <img 
-                        src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" 
+                        src="https://pub-36b2d25ce1714b7cbf09504e3ad53fae.r2.dev/spacex-removebg-preview.png" 
                         alt="Logo" 
-                        className="h-10 w-auto object-contain brightness-110" 
+                        className="h-32 w-auto object-contain brightness-0 invert opacity-95" 
                         referrerPolicy="no-referrer" 
                       />
                       <div>

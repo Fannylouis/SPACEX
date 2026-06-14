@@ -19,8 +19,13 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 md:px-12 h-20 md:h-24 flex items-center justify-between">
         <div className="flex items-center gap-4 md:gap-12">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="https://69f5e78ba0be0e562863d717.imgix.net/pho/share.jpg?w=800&h=800&bg-remove=true" alt="SpaceX" className="h-32 md:h-48 object-contain brightness-110" referrerPolicy="no-referrer" />
+          <Link to="/" className="flex items-center">
+            <img 
+              src="https://pub-36b2d25ce1714b7cbf09504e3ad53fae.r2.dev/spacex-removebg-preview.png" 
+              alt="SpaceX" 
+              className="h-40 md:h-48 object-contain brightness-0 invert opacity-95" 
+              referrerPolicy="no-referrer" 
+            />
           </Link>
 
           {/* Currency Selector */}
