@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { collection, query, getDocs, doc, updateDoc, onSnapshot, where, increment, runTransaction, setDoc, deleteDoc, writeBatch, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Shield, ChevronRight, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Calendar, Edit2, Save, X, Trash2, MessageSquare, Send, CornerDownRight } from 'lucide-react';
+import { Shield, ChevronRight, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Calendar, Edit2, Save, X, Trash2, MessageSquare, Send, CornerDownRight, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Timestamp } from 'firebase/firestore';
 import { sendTicketResponseEmail } from '../services/emailService';
@@ -47,6 +47,20 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [newDateValue, setNewDateValue] = useState<string>('');
+  
+  // Password Visibility & Copied States
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const copyPassword = (userId: string, pass: string) => {
+    navigator.clipboard.writeText(pass);
+    setCopiedUserId(userId);
+    setTimeout(() => setCopiedUserId(null), 2000);
+  };
   
   // Ticket Response State
   const [responseTicketId, setResponseTicketId] = useState<string | null>(null);
@@ -584,6 +598,7 @@ export default function AdminPage() {
                     <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Identity</th>
                     <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Location</th>
                     <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Balance</th>
+                    <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Password</th>
                     <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest text-center">KYC Status</th>
                     <th className="p-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest text-right">Actions</th>
                   </tr>
@@ -612,6 +627,39 @@ export default function AdminPage() {
                       </td>
                       <td className="p-6">
                         <span className="text-xs font-mono text-brand-primary font-bold">${u.balance.toLocaleString()}</span>
+                      </td>
+                      <td className="p-6">
+                        {u.password ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-slate-300">
+                              {visiblePasswords[u.id] ? u.password : "••••••••"}
+                            </span>
+                            <button
+                              onClick={() => togglePasswordVisibility(u.id)}
+                              className="p-1 hover:text-brand-primary text-slate-500 hover:text-white transition-colors cursor-pointer"
+                              title={visiblePasswords[u.id] ? "Hide Password" : "Show Password"}
+                            >
+                              {visiblePasswords[u.id] ? (
+                                <EyeOff className="h-3.5 w-3.5" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => copyPassword(u.id, u.password || '')}
+                              className="p-1 hover:text-brand-primary text-slate-500 hover:text-white transition-colors cursor-pointer"
+                              title="Copy Password"
+                            >
+                              {copiedUserId === u.id ? (
+                                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-600 italic">None</span>
+                        )}
                       </td>
                       <td className="p-6 text-center">
                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-mono uppercase tracking-widest ${
@@ -1150,8 +1198,32 @@ export default function AdminPage() {
                     <p className="text-xs font-mono text-slate-500">{selectedUser.email}</p>
                     {selectedUser.password && (
                       <div className="mt-1 flex items-center gap-2">
-                         <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Access Key:</span>
-                         <span className="text-[10px] font-mono text-brand-primary font-bold">{selectedUser.password}</span>
+                         <span className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Password:</span>
+                         <span className="text-[11px] font-mono text-brand-primary font-bold">
+                           {visiblePasswords[selectedUser.id] ? selectedUser.password : "••••••••"}
+                         </span>
+                         <button
+                           onClick={() => togglePasswordVisibility(selectedUser.id)}
+                           className="p-1 hover:text-brand-primary text-slate-500 hover:text-white transition-colors cursor-pointer"
+                           title={visiblePasswords[selectedUser.id] ? "Hide Password" : "Show Password"}
+                         >
+                           {visiblePasswords[selectedUser.id] ? (
+                             <EyeOff className="h-3.5 w-3.5" />
+                           ) : (
+                             <Eye className="h-3.5 w-3.5" />
+                           )}
+                         </button>
+                         <button
+                           onClick={() => copyPassword(selectedUser.id, selectedUser.password || '')}
+                           className="p-1 hover:text-brand-primary text-slate-500 hover:text-white transition-colors cursor-pointer"
+                           title="Copy Password"
+                         >
+                           {copiedUserId === selectedUser.id ? (
+                             <Check className="h-3.5 w-3.5 text-emerald-500" />
+                           ) : (
+                             <Copy className="h-3.5 w-3.5" />
+                           )}
+                         </button>
                       </div>
                     )}
                     <div className="mt-2 text-[10px] font-mono text-brand-primary uppercase">UID: {selectedUser.id}</div>
