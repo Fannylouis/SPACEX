@@ -72,6 +72,11 @@ export default function AdminPage() {
   const [applyDepositCharge, setApplyDepositCharge] = useState(false);
   const [chargeAmountInput, setChargeAmountInput] = useState('100');
 
+  // Balance Manipulation State
+  const [balanceModalUser, setBalanceModalUser] = useState<UserRecord | null>(null);
+  const [balanceInput, setBalanceInput] = useState('');
+  const [balanceActionType, setBalanceActionType] = useState<'set' | 'add' | 'subtract'>('set');
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -245,6 +250,28 @@ export default function AdminPage() {
       });
     } catch (err) {
       console.error("Error rejecting withdrawal:", err);
+    }
+  };
+
+  const handleManipulateBalance = async (userId: string, currentBalance: number, amountStr: string, actionType: 'set' | 'add' | 'subtract') => {
+    const val = parseFloat(amountStr);
+    if (isNaN(val)) return;
+    let newBalance = currentBalance;
+    if (actionType === 'set') {
+      newBalance = val;
+    } else if (actionType === 'add') {
+      newBalance = currentBalance + val;
+    } else if (actionType === 'subtract') {
+      newBalance = Math.max(0, currentBalance - val);
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', userId), { balance: newBalance });
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser({ ...selectedUser, balance: newBalance });
+      }
+    } catch (err) {
+      console.error("Error manipulating balance:", err);
     }
   };
 
@@ -661,7 +688,20 @@ export default function AdminPage() {
                         <span className="text-xs font-mono text-slate-300 uppercase">{u.country || 'Unknown'}</span>
                       </td>
                       <td className="p-6">
-                        <span className="text-xs font-mono text-brand-primary font-bold">${u.balance.toLocaleString()}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-brand-primary font-bold">${u.balance.toLocaleString()}</span>
+                          <button
+                            onClick={() => {
+                              setBalanceModalUser(u);
+                              setBalanceInput(u.balance.toString());
+                              setBalanceActionType('set');
+                            }}
+                            className="p-1 text-slate-500 hover:text-brand-primary transition-colors cursor-pointer"
+                            title="Manipulate Balance"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                       <td className="p-6">
                         {u.password ? (
@@ -1281,9 +1321,21 @@ export default function AdminPage() {
                     <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Phone Protocol</p>
                     <p className="text-sm font-mono text-white uppercase">{selectedUser.phoneNumber || 'Not Set'}</p>
                   </div>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 col-span-2">
-                    <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Portfolio Balance</p>
-                    <p className="text-xl font-mono text-brand-primary font-bold">${selectedUser.balance.toLocaleString()}</p>
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 col-span-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1">Portfolio Balance</p>
+                      <p className="text-xl font-mono text-brand-primary font-bold">${selectedUser.balance.toLocaleString()}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setBalanceModalUser(selectedUser);
+                        setBalanceInput(selectedUser.balance.toString());
+                        setBalanceActionType('set');
+                      }}
+                      className="px-4 py-2 bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:bg-brand-primary hover:text-black font-bold transition-all cursor-pointer"
+                    >
+                      Manipulate Balance
+                    </button>
                   </div>
                   
                   <div className={`p-4 rounded-xl border col-span-2 flex items-center justify-between ${adminList.includes(selectedUser.id) ? 'bg-brand-primary/5 border-brand-primary/20' : 'bg-white/5 border-white/5'}`}>
@@ -1578,6 +1630,130 @@ export default function AdminPage() {
                     className="bg-brand-primary text-black font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.05)] disabled:opacity-50 cursor-pointer"
                   >
                     {dataLoading ? "Applying..." : applyDepositCharge ? "Approve with Charge" : "Remove & Approve Full"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Balance Manipulation Modal */}
+      <AnimatePresence>
+        {balanceModalUser && (() => {
+          const currentBal = balanceModalUser.balance || 0;
+          const inputVal = parseFloat(balanceInput) || 0;
+          let calculatedNewBalance = currentBal;
+          if (balanceActionType === 'set') {
+            calculatedNewBalance = inputVal;
+          } else if (balanceActionType === 'add') {
+            calculatedNewBalance = currentBal + inputVal;
+          } else if (balanceActionType === 'subtract') {
+            calculatedNewBalance = Math.max(0, currentBal - inputVal);
+          }
+
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setBalanceModalUser(null)}
+                className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-md bg-[#0a0a0a] border border-brand-primary/20 rounded-3xl overflow-hidden shadow-2xl p-8"
+              >
+                <div className="text-center mb-6">
+                  <div className="h-16 w-16 bg-brand-primary/10 rounded-2xl flex items-center justify-center border border-brand-primary/20 mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-brand-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold uppercase tracking-tight text-white mb-1">Portfolio Balance Administration</h3>
+                  <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest leading-relaxed">
+                    Modify User Funds & Assets Securely
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between items-center py-2 border-b border-white/5">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">User Identity:</span>
+                    <span className="text-xs font-mono text-white font-bold">{balanceModalUser.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-white/5">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Current Balance:</span>
+                    <span className="text-sm font-mono text-emerald-400 font-bold">${currentBal.toLocaleString()}</span>
+                  </div>
+
+                  <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBalanceActionType('set')}
+                        className={`py-2 rounded-lg text-[9px] font-mono uppercase tracking-widest font-bold transition-all cursor-pointer ${balanceActionType === 'set' ? 'bg-brand-primary text-black' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                      >
+                        Set Exact
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBalanceActionType('add')}
+                        className={`py-2 rounded-lg text-[9px] font-mono uppercase tracking-widest font-bold transition-all cursor-pointer ${balanceActionType === 'add' ? 'bg-emerald-500 text-black' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                      >
+                        Add Funds
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBalanceActionType('subtract')}
+                        className={`py-2 rounded-lg text-[9px] font-mono uppercase tracking-widest font-bold transition-all cursor-pointer ${balanceActionType === 'subtract' ? 'bg-red-500 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                      >
+                        Deduct
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">
+                          {balanceActionType === 'set' ? 'New Exact Balance ($):' : balanceActionType === 'add' ? 'Amount to Add ($):' : 'Amount to Deduct ($):'}
+                        </label>
+                      </div>
+                      <input 
+                        type="number" 
+                        value={balanceInput}
+                        onChange={(e) => setBalanceInput(e.target.value)}
+                        placeholder="Enter amount"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white outline-none focus:border-brand-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 border-t border-brand-primary/10 mt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">Resulting Balance:</span>
+                      <span className="text-[8px] font-mono text-slate-500 uppercase">Updated user record value</span>
+                    </div>
+                    <span className="text-lg font-mono text-brand-primary font-bold">
+                      ${calculatedNewBalance.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setBalanceModalUser(null)}
+                    className="bg-white/5 hover:bg-white/10 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      await handleManipulateBalance(balanceModalUser.id, currentBal, balanceInput, balanceActionType);
+                      setBalanceModalUser(null);
+                    }}
+                    className="bg-brand-primary text-black font-mono text-[10px] uppercase font-bold tracking-widest py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer hover:bg-white"
+                  >
+                    Confirm Update
                   </button>
                 </div>
               </motion.div>
