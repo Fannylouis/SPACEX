@@ -50,7 +50,7 @@ export const sendWelcomeEmail = async (email: string, firstName: string) => {
           <p style="margin: 0; font-size: 14px; font-weight: bold; color: #fff;">SECURITY PROTOCOL ENABLED</p>
           <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Your vault is protected by high-level encryption and real-time monitoring.</p>
         </div>
-        <a href="${window.location.origin}/dashboard" style="display: inline-block; background-color: #3b82f6; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Access Dashboard</a>
+        <a href="${window.location.origin}/invest/dashboard" style="display: inline-block; background-color: #3b82f6; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Access Dashboard</a>
         <p style="margin-top: 40px; font-size: 12px; color: #475569; border-top: 1px solid #1e293b; padding-top: 20px;">
           This is an automated transmission from the SpaceX Vault Protocol.
         </p>
@@ -97,7 +97,7 @@ export const sendTicketResponseEmail = async (email: string, subject: string, re
           The status of your ticket has been updated to <strong>RESOLVED</strong>. If you require further assistance, please open a secondary channel via your dashboard.
         </p>
 
-        <a href="${window.location.origin}/dashboard?tab=support" style="display: inline-block; background-color: #3b82f6; color: #000; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">View Support Dashboard</a>
+        <a href="${window.location.origin}/invest/dashboard?tab=support" style="display: inline-block; background-color: #3b82f6; color: #000; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">View Support Dashboard</a>
         
         <p style="margin-top: 40px; font-size: 10px; color: #334155; border-top: 1px solid #1e293b; padding-top: 20px; font-family: monospace;">
           // TRANSACTION_TYPE: SUPPORT_REPLY

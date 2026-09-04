@@ -52,6 +52,8 @@ function AppRoutes() {
         
         {/* Shop Redirects */}
         <Route path="dashboard/shop/*" element={<Navigate to="/invest/login" replace />} />
+        <Route path="dashboard" element={<Navigate to="/invest/dashboard" replace />} />
+        <Route path="dashboard/*" element={<Navigate to="/invest/dashboard" replace />} />
 
         <Route path="invest">
           <Route index element={<InvestPage />} />
